@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Research Workspace</title>
+<style>
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --border: #e8e8e8;
+  --text: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #9b9b9b;
+  --accent: #2f2f2f;
+  --accent-hover: #1a1a1a;
+  --tag-bg: #f0f0f0;
+  --tag-text: #555;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --radius: 8px;
+  --radius-sm: 6px;
+  --sidebar-w: 240px;
+  --insight-w: 280px;
+  --header-h: 52px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Consolas", monospace;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+header {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  color: var(--accent);
+  cursor: default;
+  user-select: none;
+}
+.header-logo .logo-icon {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+.header-search {
+  flex: 1;
+  position: relative;
+}
+.header-search input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 12px 0 34px;
+  font-size: 14px;
+  font-family: var(--font);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.header-search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(47,47,47,0.08);
+}
+.header-search .search-icon {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  font-size: 14px;
+  pointer-events: none;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg); border-color: #ccc; }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+/* ── Layout ── */
+main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 12px 8px;
+  gap: 4px;
+}
+.sidebar-section {
+  margin-bottom: 8px;
+}
+.sidebar-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding: 6px 10px 4px;
+  letter-spacing: 0.03em;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.1s, color 0.1s;
+  user-select: none;
+}
+.sidebar-item:hover { background: var(--bg); }
+.sidebar-item.active { background: #efefef; color: var(--text); font-weight: 500; }
+.sidebar-item .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--bg);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.sidebar-item .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Center ── */
+.center {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* Research Question Block */
+.question-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.question-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+.question-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--tag-bg);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--tag-text);
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+.tag:hover { background: #e0e0e0; }
+.tag.highlight { background: #2f2f2f; color: #fff; }
+
+/* Paper Cards */
+.papers-section {}
+.papers-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.papers-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.papers-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.paper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.paper-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+.paper-card:hover {
+  border-color: #ccc;
+  box-shadow: var(--shadow-md);
+}
+.paper-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.paper-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+}
+.paper-year {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+.paper-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.paper-meta span { white-space: nowrap; }
+.paper-abstract {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-top: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.paper-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.paper-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.paper-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #f4f4f5;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+}
+.paper-theory {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #e8f0fe;
+  border-radius: 4px;
+  color: #3b5998;
+  font-weight: 500;
+}
+.paper-actions {
+  display: flex;
+  gap: 4px;
+}
+.paper-actions .btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+/* Topic Categories */
+.topics-block {}
+.topics-block-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.topic-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  user-select: none;
+  box-shadow: var(--shadow-sm);
+}
+.topic-chip:hover { border-color: #aaa; }
+.topic-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Outline Block */
+.outline-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.outline-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.outline-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.outline-node {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.outline-node:hover { background: var(--bg); }
+.outline-node.l1 { font-weight: 600; color: var(--text); padding-left: 0; }
+.outline-node.l2 { padding-left: 20px; }
+.outline-node.l3 { padding-left: 36px; font-size: 12px; }
+
+/* ── Insights Panel ── */
+.insights {
+  width: var(--insight-w);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.insight-section {}
+.insight-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.insight-item {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.insight-item:hover { background: var(--bg); }
+.insight-item .bullet {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.insight-gap-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #fff3cd;
+  color: #856404;
+  margin-right: 4px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #ccc; }
+
+/* Empty state / selected paper highlight */
+.paper-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* ── Research Dashboard (5 cards) ── */
+.research-dashboard {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.research-card {
+  flex: 1;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.research-card:hover {
+  border-color: #aaa;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.research-card-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.research-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.research-card-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.research-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(47,47,47,0.15);
+}
+
+/* ── Card Detail Block ── */
+.detail-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.detail-block-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-item {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+}
+.detail-item:hover { background: var(--bg); }
+.detail-item .bullet {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.var-role {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header>
+  <div class="header-logo">
+    <div class="logo-icon">R</div>
+    ResearchOS
+  </div>
+  <div class="header-search">
+    <span class="search-icon">&#9906;</span>
+    <input type="text" id="searchInput" placeholder="输入研究问题，如：ESG 对成本粘性的影响..." value="ESG 如何影响成本粘性">
+  </div>
+  <div class="header-actions">
+    <button class="btn" onclick="handleSearch()">&#128269; 搜索</button>
+    <button class="btn btn-primary" onclick="handleNewResearch()">+ 新建研究</button>
+    <button class="btn" onclick="handleExport()">&#10515; 导出</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main>
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">研究主题</div>
+      <div id="topicList"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">最近研究</div>
+      <div id="recentList"></div>
+    </div>
+  </aside>
+
+  <!-- ─── CENTER ─── -->
+  <section class="center" id="centerArea">
+    <!-- Block 1: Research Question -->
+    <div class="question-block">
+      <div class="question-title" id="questionTitle">ESG 如何影响成本粘性</div>
+      <div class="question-tags" id="questionTags">
+        <span class="tag highlight">sticky costs</span>
+        <span class="tag">agency theory</span>
+        <span class="tag">ESG disclosure</span>
+        <span class="tag">cost behavior</span>
+        <span class="tag">sustainability</span>
+        <span class="tag">corporate governance</span>
+      </div>
+    </div>
+
+    <!-- Block 2: Paper List -->
+    <div class="papers-section">
+      <div class="papers-section-header">
+        <span class="papers-section-title">相关论文</span>
+        <span class="papers-count" id="paperCount">共 6 篇</span>
+      </div>
+      <div class="paper-list" id="paperList">
+        <!-- Papers rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Block 3: Topic Categories -->
+    <div class="topics-block">
+      <div class="topics-block-title">研究主题分类</div>
+      <div class="topic-chips" id="topicChips">
+        <div class="topic-chip active" data-topic="all">全部</div>
+        <div class="topic-chip" data-topic="formation">成本粘性形成机制</div>
+        <div class="topic-chip" data-topic="esg">ESG 影响</div>
+        <div class="topic-chip" data-topic="digital">数字化转型</div>
+        <div class="topic-chip" data-topic="governance">公司治理</div>
+      </div>
+    </div>
+
+    <!-- Block 4: Outline -->
+    <div class="outline-block">
+      <div class="outline-title">综述大纲</div>
+      <div class="outline-tree">
+        <div class="outline-node l1">1. 引言</div>
+        <div class="outline-node l2">1.1 研究背景与意义</div>
+        <div class="outline-node l3">成本粘性现象的发现与演进</div>
+        <div class="outline-node l1">2. 成本粘性的理论基础</div>
+        <div class="outline-node l2">2.1 代理理论视角</div>
+        <div class="outline-node l2">2.2 资源调整成本</div>
+        <div class="outline-node l1">3. ESG 对成本粘性的影响机制</div>
+        <div class="outline-node l2">3.1 信息披露与透明度</div>
+        <div class="outline-node l2">3.2 利益相关者压力</div>
+        <div class="outline-node l2">3.3 融资约束缓解</div>
+        <div class="outline-node l1">4. 未来研究方向</div>
+        <div class="outline-node l2">4.1 ESG 维度差异化影响</div>
+        <div class="outline-node l2">4.2 跨文化与制度比较</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── INSIGHTS PANEL (removed, area merged into center) ─── -->
+</main>
+
+<script>
+// ═══════════════════════ DATA MODEL ═══════════════════════
+let nextId = 2;
+
+const defaultPapers = [
+  { id: 1, title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021. We find that better ESG performance significantly reduces cost stickiness, and this effect is more pronounced in firms with higher agency costs and weaker external monitoring.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory", topic: "esg" },
+  { id: 2, title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior. Using a difference-in-differences design around mandatory ESG disclosure regulation, we document that enhanced transparency reduces managerial empire-building incentives, thereby lowering cost stickiness.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory", topic: "esg" },
+  { id: 3, title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness, demonstrating that SG&A costs increase more when activity rises than they decrease when activity falls by an equivalent amount.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory", topic: "formation" },
+  { id: 4, title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures. We find that digital adoption increases cost flexibility and reduces stickiness, especially for labor costs.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View", topic: "digital" },
+  { id: 5, title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms. Results show that larger boards and higher board independence are associated with reduced cost stickiness.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory", topic: "governance" },
+  { id: 6, title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior. Green innovation creates specialized resources that increase cost stickiness in the short run but reduce it in the long run.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory", topic: "esg" }
+];
+
+const defaultTopicData = {
+  papers: defaultPapers,
+  theories: ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"],
+  variables: [
+    { name: "ESG Score", role: "自变量" },
+    { name: "Cost Stickiness", role: "因变量" },
+    { name: "Firm Size", role: "控制变量" },
+    { name: "Leverage", role: "控制变量" },
+    { name: "ROA", role: "控制变量" },
+    { name: "Board Size", role: "调节变量" }
+  ],
+  methods: ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"],
+  structure: ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
+};
+
+const researchTopics = [
+  {
+    id: 1,
+    name: "ESG 如何影响成本粘性",
+    createdAt: Date.now() - 3600000,
+    modifiedAt: Date.now() - 3600000,
+    data: JSON.parse(JSON.stringify(defaultTopicData))
+  }
+];
+
+let selectedTopicId = 1;
+let activeCard = 'papers'; // currently expanded card section
+
+// ═══════════════════════ SIDEBAR ═══════════════════════
+function renderSidebar() {
+  const topicList = document.getElementById('topicList');
+  const recentList = document.getElementById('recentList');
+
+  // 研究主题 — sorted by creation order
+  const topicsByCreation = [...researchTopics].sort((a, b) => a.createdAt - b.createdAt);
+  topicList.innerHTML = topicsByCreation.map(t => `
+    <div class="sidebar-item${t.id === selectedTopicId ? ' active' : ''}" data-topic-id="${t.id}">
+      ${t.name}
+    </div>
+  `).join('') || '<div class="sidebar-item" style="color:var(--text-tertiary)">暂无研究主题</div>';
+
+  // 最近研究 — top 10 by modifiedAt desc
+  const recentTopics = [...researchTopics].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 10);
+  recentList.innerHTML = recentTopics.map(t => `
+    <div class="sidebar-item${t.id === selectedTopicId ? ' active' : ''}" data-topic-id="${t.id}">
+      <span class="dot" style="background:${t.id === selectedTopicId ? 'var(--accent)' : '#ccc'}"></span>
+      ${t.name}
+    </div>
+  `).join('') || '<div class="sidebar-item" style="color:var(--text-tertiary)">暂无最近研究</div>';
+}
+
+function getSelectedTopic() {
+  return researchTopics.find(t => t.id === selectedTopicId);
+}
+
+function selectTopic(id) {
+  selectedTopicId = id;
+  const topic = getSelectedTopic();
+  if (!topic) return;
+  topic.modifiedAt = Date.now();
+  document.getElementById('searchInput').value = topic.name;
+  renderSidebar();
+  renderCenter(topic);
+}
+
+// ═══════════════════════ CENTER RENDER ═══════════════════════
+const cardDefs = [
+  { key: 'papers', icon: '📄', title: '已有文献', desc: '浏览与主题相关的学术论文' },
+  { key: 'theories', icon: '📚', title: '理论列表', desc: '相关理论框架与视角' },
+  { key: 'variables', icon: '📊', title: '变量列表', desc: '自变量、因变量、控制变量等' },
+  { key: 'methods', icon: '🔬', title: '常用方法', desc: '实证方法与研究设计' },
+  { key: 'structure', icon: '📝', title: '综述结构', desc: '文献综述的组织框架' }
+];
+
+function renderCenter(topic) {
+  const center = document.getElementById('centerArea');
+  const tags = topic.data.papers.slice(0, 4).map(p => p.tags[0]).filter((v, i, a) => a.indexOf(v) === i);
+
+  let papersHtml = '';
+  let detailHtml = '';
+
+  const showPapers = !activeCard;
+
+  if (showPapers) {
+    papersHtml = `<div class="paper-list" id="paperList"></div>`;
+  } else {
+    detailHtml = renderCardDetail(topic);
+  }
+
+  center.innerHTML = `
+    <div class="question-block">
+      <div class="question-title">${topic.name}</div>
+      <div class="question-tags" id="questionTags">
+        ${tags.map((t, i) => `<span class="tag${i===0?' highlight':''}">${t}</span>`).join('')}
+      </div>
+    </div>
+    <div class="research-dashboard" id="researchDashboard">
+      ${cardDefs.map(c => `
+        <div class="research-card${activeCard === c.key ? ' active' : ''}" data-card="${c.key}">
+          <div class="research-card-icon">${c.icon}</div>
+          <div class="research-card-title">${c.title}</div>
+          <div class="research-card-desc">${c.desc}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div id="cardDetailArea">${detailHtml}</div>
+    ${papersHtml}
+  `;
+
+  renderPapers(topic.data.papers);
+
+  // Bind dashboard card clicks
+  document.getElementById('researchDashboard').addEventListener('click', function(e) {
+    const card = e.target.closest('.research-card');
+    if (!card) return;
+    const key = card.dataset.card;
+    if (activeCard === key) {
+      activeCard = null;
+    } else {
+      activeCard = key;
+    }
+    renderCenter(getSelectedTopic());
+  });
+
+  // Re-bind outline clicks (used in card detail)
+  rebindOutlineEvents();
+}
+
+function renderPapers(papers) {
+  const container = document.getElementById('paperList');
+  if (!container) return;
+  container.innerHTML = papers.map(p => `
+    <div class="paper-card" data-id="${p.id}">
+      <div class="paper-card-header">
+        <div class="paper-title">${p.title}</div>
+        <div class="paper-year">${p.year}</div>
+      </div>
+      <div class="paper-meta">
+        <span>${p.authors}</span>
+        <span style="font-weight:500">${p.journal}</span>
+      </div>
+      <div class="paper-abstract">${p.abstract}</div>
+      <div class="paper-card-footer">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div class="paper-tags">
+            ${p.tags.map(t => `<span class="paper-tag">${t}</span>`).join('')}
+          </div>
+          <span class="paper-theory">${p.theory}</span>
+        </div>
+        <div class="paper-actions">
+          <button class="btn" title="查看详情">详情</button>
+          <button class="btn" title="保存">保存</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.paper-card').forEach(card => {
+    card.addEventListener('click', function() {
+      container.querySelectorAll('.paper-card').forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+    });
+  });
+}
+
+function renderCardDetail(topic) {
+  const data = topic.data;
+
+  switch (activeCard) {
+    case 'papers':
+      return `
+        <div class="detail-block">
+          <div class="detail-block-title">已有文献</div>
+          <div class="paper-list" id="paperList"></div>
+        </div>`;
+    case 'theories':
+      return `
+        <div class="detail-block">
+          <div class="detail-block-title">理论列表</div>
+          <div class="detail-list">
+            ${data.theories.map(t => `<div class="detail-item"><span class="bullet"></span> ${t}</div>`).join('')}
+          </div>
+        </div>`;
+    case 'variables':
+      return `
+        <div class="detail-block">
+          <div class="detail-block-title">变量列表</div>
+          <div class="detail-list">
+            ${data.variables.map(v => `<div class="detail-item"><span class="bullet"></span> ${v.name} <span class="var-role">(${v.role})</span></div>`).join('')}
+          </div>
+        </div>`;
+    case 'methods':
+      return `
+        <div class="detail-block">
+          <div class="detail-block-title">常用方法</div>
+          <div class="detail-list">
+            ${data.methods.map(m => `<div class="detail-item"><span class="bullet"></span> ${m}</div>`).join('')}
+          </div>
+        </div>`;
+    case 'structure':
+      return `
+        <div class="detail-block">
+          <div class="detail-block-title">综述结构</div>
+          <div class="detail-list">
+            ${data.structure.map((s, i) => `<div class="detail-item"><span class="bullet"></span> ${i + 1}. ${s}</div>`).join('')}
+          </div>
+        </div>`;
+    default:
+      return '';
+  }
+}
+
+function rebindOutlineEvents() {
+  const outlineEl = document.querySelector('.outline-tree');
+  if (outlineEl) {
+    outlineEl.addEventListener('click', function(e) {
+      const node = e.target.closest('.outline-node');
+      if (!node) return;
+      this.querySelectorAll('.outline-node').forEach(n => { n.style.color = ''; n.style.fontWeight = ''; });
+      node.style.color = 'var(--text)';
+      node.style.fontWeight = '600';
+    });
+  }
+}
+
+// ═══════════════════════ HEADER BUTTONS ═══════════════════════
+function handleSearch() {
+  alert('实现中');
+}
+
+function handleNewResearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) {
+    alert('请输入研究主题');
+    return;
+  }
+
+  // Check if topic already exists
+  const existing = researchTopics.find(t => t.name === q);
+  if (existing) {
+    selectTopic(existing.id);
+    return;
+  }
+
+  // Create new topic
+  const newTopic = {
+    id: nextId++,
+    name: q,
+    createdAt: Date.now(),
+    modifiedAt: Date.now(),
+    data: {
+      papers: [],
+      theories: [],
+      variables: [],
+      methods: [],
+      structure: ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
+    }
+  };
+  researchTopics.push(newTopic);
+  activeCard = null;
+  selectTopic(newTopic.id);
+}
+
+function handleExport() {
+  alert('导出功能：将导出当前研究综述为 Markdown / Word 格式。');
+}
+
+// ═══════════════════════ SIDEBAR CLICK ═══════════════════════
+document.querySelector('.sidebar').addEventListener('click', function(e) {
+  const item = e.target.closest('.sidebar-item');
+  if (!item) return;
+  const id = parseInt(item.dataset.topicId);
+  if (!id) return;
+  activeCard = null;
+  selectTopic(id);
+});
+
+// ═══════════════════════ SEARCH KEYDOWN ═══════════════════════
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    handleSearch();
+  }
+});
+
+// ═══════════════════════ INIT ═══════════════════════
+renderSidebar();
+renderCenter(getSelectedTopic());
+</script>
+</body>
+</html>
