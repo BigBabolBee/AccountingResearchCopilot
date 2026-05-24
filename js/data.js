@@ -1,5 +1,5 @@
 // ═══════════════════════ ENTITY DATA MODEL ═══════════════════════
-const STORAGE_KEY = 'accounting_research_copilot_v2';
+const STORAGE_KEY = 'accounting_research_copilot_v3';
 
 // ── Entity arrays ──
 let topics = [];
@@ -53,14 +53,7 @@ function seedDefaultData() {
   ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
     .forEach((s, i) => structures.push({ id: nextIdFor('structures'), topicId: tid, name: s, sortOrder: i }));
 
-  [
-    { term: "ESG 评级", category: "term" },
-    { term: "成本粘性", category: "term" },
-    { term: "代理成本", category: "term" },
-    { term: "信息不对称", category: "cluster" },
-    { term: "利益相关者", category: "cluster" },
-    { term: "调整成本", category: "gap" }
-  ].forEach(t => termExpansions.push({ id: nextIdFor('termExpansions'), topicId: tid, ...t }));
+  // termExpansions 初始为空，由用户通过 AI 拓展或手动新建来填充
 }
 
 // ── Persistence ──

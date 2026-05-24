@@ -1,5 +1,7 @@
 let selectedTopicId = topics[0] ? topics[0].id : null;
 let activeCard = 'papers';
+let rightPanelMode = 'list';   // 'list' | 'detail'
+let rightPanelTerm = null;     // current term name in detail mode
 
 // ═══════════════════════ SIDEBAR ═══════════════════════
 function renderSidebar() {
@@ -33,6 +35,8 @@ function selectTopic(id) {
   topic.modifiedAt = Date.now();
   saveAll();
   document.getElementById('searchInput').value = topic.name;
+  rightPanelMode = 'list';
+  rightPanelTerm = null;
   renderSidebar();
   renderCenter(topic);
 }
@@ -102,9 +106,75 @@ function renderRightPanel(topic) {
   const tid = topic ? topic.id : null;
   const allTerms = tid ? getTermExpansions(tid) : [];
 
-  const synonyms = allTerms.filter(t => !t.category || t.category === 'term' || t.category === 'synonym');
-  const clusters = allTerms.filter(t => t.category === 'cluster');
-  const gaps = allTerms.filter(t => t.category === 'gap');
+  if (rightPanelMode === 'list' || !rightPanelTerm) {
+    renderTermList(panel, topic, allTerms);
+  } else {
+    renderTermDetail(panel, topic, allTerms);
+  }
+}
+
+function renderTermList(panel, topic, allTerms) {
+  // Group terms by parentTerm (fallback to term itself)
+  const groups = {};
+  allTerms.forEach(t => {
+    const key = t.parentTerm || t.term;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  const entries = Object.entries(groups).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+
+  let listHtml = '';
+  entries.forEach(([name, items]) => {
+    listHtml += `
+      <div class="term-list-item" data-term="${escapeHtml(name)}">
+        <span class="term-list-item-name">${escapeHtml(name)}</span>
+        <span class="term-list-item-count">${items.length}</span>
+      </div>`;
+  });
+  if (!listHtml) listHtml = '<div class="right-panel-empty">暂无术语，使用 AI 拓展或手动新建</div>';
+
+  panel.innerHTML = `
+    <div class="right-panel-header">
+      <div class="right-panel-subtitle">术语知识网络</div>
+    </div>
+    <div class="term-list" id="termList">${listHtml}</div>
+    <div class="right-panel-actions">
+      <button class="btn" id="btnAddRootTerm">+ 新建术语</button>
+      <button class="btn" id="btnAiExpand" title="AI 智能拓展术语">AI 拓展</button>
+    </div>
+  `;
+
+  // Bind term list item click → drill down
+  panel.querySelectorAll('.term-list-item').forEach(item => {
+    item.addEventListener('click', function() {
+      rightPanelMode = 'detail';
+      rightPanelTerm = this.dataset.term;
+      renderRightPanel(getSelectedTopic());
+    });
+  });
+
+  // Bind + root term
+  panel.querySelector('#btnAddRootTerm').addEventListener('click', function() {
+    showTermModal('term', function(term) {
+      const t = getSelectedTopic();
+      termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term, category: 'term' });
+      t.modifiedAt = Date.now();
+      saveAll();
+      renderRightPanel(t);
+    });
+  });
+
+  panel.querySelector('#btnAiExpand').addEventListener('click', showAiExpandModal);
+}
+
+function renderTermDetail(panel, topic, allTerms) {
+  const curTerm = rightPanelTerm;
+  const myTerms = allTerms.filter(t => (t.parentTerm || t.term) === curTerm);
+
+  const synonyms = myTerms.filter(t => !t.category || t.category === 'term' || t.category === 'synonym');
+  const clusters = myTerms.filter(t => t.category === 'cluster');
+  const gaps = myTerms.filter(t => t.category === 'gap');
 
   function renderTags(terms, tagClass) {
     if (!terms.length) return '<div class="right-panel-empty">暂无</div>';
@@ -115,8 +185,8 @@ function renderRightPanel(topic) {
 
   panel.innerHTML = `
     <div class="right-panel-header">
-      <div class="right-panel-topic">${escapeHtml(topic ? topic.name : '')}</div>
-      <div class="right-panel-subtitle">术语知识网络</div>
+      <button class="right-panel-back" id="btnBackToList">&larr; 术语知识网络</button>
+      <div class="right-panel-current-term">${escapeHtml(curTerm)}</div>
     </div>
     <div class="right-panel-section section-syn">
       <div class="right-panel-section-title">
@@ -140,6 +210,13 @@ function renderRightPanel(topic) {
       <button class="btn" id="btnAiExpand" title="AI 智能拓展术语">AI 拓展</button>
     </div>
   `;
+
+  // Back button
+  panel.querySelector('#btnBackToList').addEventListener('click', function() {
+    rightPanelMode = 'list';
+    rightPanelTerm = null;
+    renderRightPanel(getSelectedTopic());
+  });
 
   // Bind term delete + search click
   panel.querySelectorAll('.term-tags').forEach(section => {
@@ -168,7 +245,7 @@ function renderRightPanel(topic) {
       const cat = this.dataset.cat;
       showTermModal(cat, function(term) {
         const t = getSelectedTopic();
-        termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term, category: cat });
+        termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term, category: cat, parentTerm: curTerm });
         t.modifiedAt = Date.now();
         saveAll();
         renderRightPanel(t);
@@ -176,7 +253,9 @@ function renderRightPanel(topic) {
     });
   });
 
-  panel.querySelector('#btnAiExpand').addEventListener('click', showAiExpandModal);
+  panel.querySelector('#btnAiExpand').addEventListener('click', function() {
+    showAiExpandModal(curTerm);
+  });
 }
 
 function renderPapers(papersList) {
@@ -469,11 +548,11 @@ function parseTermParts(text) {
 
 // ── AI API ──
 
-function showAiExpandModal() {
+function showAiExpandModal(prefillTerm) {
   const config = loadAiConfig();
   let step = 1; // 1: input term, 2: config, 3: loading/results
   let aiResults = { core_term_cn: '', core_term_en: '', definition_cn: '', synonyms: [], relation_clusters: [], gaps: [] };
-  let termInput = document.getElementById('searchInput').value.trim();
+  let termInput = prefillTerm || document.getElementById('searchInput').value.trim();
   let abortController = null;
 
   const overlay = document.createElement('div');
@@ -693,12 +772,15 @@ function showAiExpandModal() {
         if (checks.length === 0) { overlay.remove(); return; }
         const t = getSelectedTopic();
         const items = overlay._flatItems || [];
+        const parentTerm = aiResults.core_term_cn || termInput;
         checks.forEach(cb => {
           const item = items[parseInt(cb.dataset.fi)];
-          if (item) termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term: item.text, category: item.category || 'term' });
+          if (item) termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term: item.text, category: item.category || 'term', parentTerm });
         });
         t.modifiedAt = Date.now();
         saveAll();
+        rightPanelMode = 'detail';
+        rightPanelTerm = parentTerm;
         renderRightPanel(t);
         overlay.remove();
       };
