@@ -53,8 +53,14 @@ function seedDefaultData() {
   ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
     .forEach((s, i) => structures.push({ id: nextIdFor('structures'), topicId: tid, name: s, sortOrder: i }));
 
-  ["ESG 评级", "成本粘性", "代理成本", "信息不对称", "利益相关者", "调整成本"]
-    .forEach(t => termExpansions.push({ id: nextIdFor('termExpansions'), topicId: tid, term: t }));
+  [
+    { term: "ESG 评级", category: "term" },
+    { term: "成本粘性", category: "term" },
+    { term: "代理成本", category: "term" },
+    { term: "信息不对称", category: "cluster" },
+    { term: "利益相关者", category: "cluster" },
+    { term: "调整成本", category: "gap" }
+  ].forEach(t => termExpansions.push({ id: nextIdFor('termExpansions'), topicId: tid, ...t }));
 }
 
 // ── Persistence ──
@@ -95,78 +101,18 @@ function saveAiConfig(config) {
   localStorage.setItem('ai_config', JSON.stringify(config));
 }
 // ── AI API ──
-async function callAiExpand(term, config, signal) {
-  const systemPrompt = `你是一名中国大陆高校的企业管理与会计学教授，正在指导博士生做文献综述。你必须只返回一个 JSON 对象，不要包含任何其他文字、解释或 markdown 代码块。
+async function translateTerm(term, config) {
+  const systemPrompt = `你是一名学术翻译助手。用户输入一个学术术语，你需要将其规范化为"中文（English）"格式。
+规则：
+- 如果输入只有中文，补充规范的英文翻译
+- 如果输入只有英文，补充规范的中文翻译
+- 如果输入已经是"中文（英文）"或"中文（English）"格式，优化使其更规范
+- 中文部分使用中国大陆学术界的规范译法
+- 英文部分使用SSCI/CSSCI文献中通用的学术术语
+- 中文不超过12个汉字，英文不超过5个单词
+- 只返回格式化后的术语字符串，不要任何解释或额外文字`;
 
-你需要从以下四个维度推荐该领域内高价值的学术概念：
-
-1. terms（核心术语）：该领域特有的专业术语。必须是中文学术界通用的表述，括号内附带英文对应词。排除教科书级别的基础概念。
-2. theories（相关理论）：解释该领域现象的主流理论框架。必须是在 SSCI/CSSCI 期刊中被实际引用的理论，附带中文译名和英文原名。
-3. research_directions（研究前沿）：该领域近年来的热门研究方向与新兴议题，用中文表述。
-4. variables（关键变量）：该领域实证研究中常用的被解释变量、解释变量、调节变量或中介变量，附带中英文。
-
-核心原则：
-- 禁止推荐以下内容：任何入门教科书（如罗宾斯《管理学》、罗斯《公司理财》）中已详细讲解的概念；百度百科/维基百科前三条就能查到的通用术语；字面上与用户输入的关键词高度重合的词汇
-- 推荐的每个概念必须满足至少一条：① 该领域 Top 期刊近 3 年的高频关键词 ② 不同流派对同一现象的竞争性解释中所用的专有名词 ③ 实证研究中作为核心机制变量但非该领域研究者不易想到的构念
-- 中文表述必须是中文学术界实际使用的术语，英文仅作为补充标注。不要做英译中
-- 每个类别推荐 3-6 个概念，宁缺毋滥
-- 如果不确定某个概念在学术文献中是否真实存在，就不要推荐
-
-返回格式：{"terms": ["中文术语 (English Term)"], "theories": ["中文理论名 (English Name)"], "research_directions": ["中文方向描述"], "variables": ["中文变量名 (English Variable)"]}`;
-
-  const userPrompt = `研究方向："${term}"
-
-请从以上四个维度推荐相关的学术概念。记住核心原则：只推荐入门博士生不知道但非常有价值的概念，宁缺毋滥。`;
-
-  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.4,
-      max_tokens: 3000
-    }),
-    signal
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`API 错误 (${resp.status}): ${text}`);
-  }
-
-  const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content || '{}';
-  // Try to extract JSON object from response
-  const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('AI 返回格式异常，未找到 JSON 对象');
-  const obj = JSON.parse(match[0]);
-  return {
-    terms: obj.terms || [],
-    theories: obj.theories || [],
-    research_directions: obj.research_directions || [],
-    variables: obj.variables || []
-  };
-}
-
-// ── AI Translation (normalize all terms to bilingual format) ──
-async function translateAiResults(results, config, signal) {
-  const systemPrompt = `你是一名企业管理与会计学领域的学术翻译专家。你必须只返回一个 JSON 对象，不要包含任何其他文字、解释或 markdown 代码块。
-
-你会收到一个 JSON 对象，包含四个数组，每个数组元素是一个学术术语。每个术语可能是纯中文、纯英文、或"中文 (English)"双语格式。
-
-任务：将每个术语统一为 "中文术语 (English Term)" 的双语格式：
-- 若术语是纯中文 → 补充英文学术译名
-- 若术语是纯英文 → 补充中文学术译名
-- 若已是双语格式 → 保留原样，仅当翻译有明显错误时才修正
-- 翻译必须使用学术界的通用规范表述，严禁直译、机翻或口语化
-
-直接返回与输入结构完全相同的 JSON 对象，不要遗漏或新增任何术语。`;
-
-  const userPrompt = JSON.stringify(results);
+  const userPrompt = `术语：${term}`;
 
   const resp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
@@ -178,26 +124,166 @@ async function translateAiResults(results, config, signal) {
         { role: 'user', content: userPrompt }
       ],
       temperature: 0.2,
-      max_tokens: 3000
+      max_tokens: 200
+    })
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`API 错误 (${resp.status}): ${text}`);
+  }
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content || term;
+  return content.trim();
+}
+
+async function callAiExpand(term, config, signal) {
+  const systemPrompt = `你是一名中国大陆高校的企业管理与会计学教授，
+你的任务是：针对用户输入的某个学术术语，进行"术语扩展"，
+为研究团队生成一份结构化的知识网络，帮助他们快速理解该术语的研究生态。
+
+扩展必须严格遵循以下三层结构，缺一不可。
+
+【第一层：基础词库式扩展】
+提供术语的核心定义，及其在学术语境下的同义、近义、子集、反义、操作别名。
+所有术语必须简洁、真实存在于CSSCI/SSCI文献中，杜绝口语化表达。
+
+【第二层：结构化关系式扩展】
+按照因果关系和操作关系，将相关术语分簇呈现：
+- 前因变量簇（导致该术语现象的因素）
+- 后果变量簇（该术语现象所引发的效应）
+- 调节/抑制因素簇（影响上述关系强弱的外部或内部条件）
+- 测量模型簇（实证研究中常用的模型或方法名称）
+- 数据库/数据源映射（国内常用数据库，如CSMAR、CNRDS中对应的表或板块）
+每个簇的术语需配一个极短的关系提示（不超过10个汉字），说明其与核心术语的逻辑联系。
+
+【第三层：启发性"缺口"式扩展】
+提供该术语领域内的：
+- 新兴方向（近3年出现的、文献稀少但有潜力的交叉点）
+- 争议地带（理论上存在对立解释或实证结论冲突的点）
+- 反向思维提示（从相反角度或解决该现象的角度提出问题）
+每项提示只给一个极简短语（不超过20字），旨在激发选题灵感，而非展开论述。
+
+【禁止返回】
+- 论文标题、完整研究问题、长句
+- "基于……""……影响……""……机制研究"等句式
+- 教科书级入门基础概念
+- 与输入术语完全同义重复的术语
+
+【术语长度限制】
+- name_cn：不超过12个汉字
+- name_en：不超过5个单词
+- 关系提示与缺口描述：不超过15个汉字
+
+【数量要求】
+- 同义词（含近义、反义、子集等）：2-5个
+- 每个关系簇：3-6个术语，宁缺毋滥
+- 缺口项：2-4条
+
+【返回格式】
+你必须只返回一个严格的JSON对象，结构如下：
+{
+  "core_term_cn": "用户输入的术语",
+  "core_term_en": "英文翻译",
+  "definition_cn": "一句话标准学术定义，不超过25字",
+  "synonyms": [
+    {
+      "name_cn": "中文术语",
+      "name_en": "English Term",
+      "relation_type": "近义 / 子概念 / 反义 / 操作别名"
+    }
+  ],
+  "relation_clusters": [
+    {
+      "cluster_type": "antecedent",
+      "cluster_name_cn": "前因变量",
+      "terms": [
+        {
+          "name_cn": "中文术语",
+          "name_en": "English Term",
+          "relation_hint": "极短逻辑提示，如'提高调整成本'"
+        }
+      ]
+    },
+    {
+      "cluster_type": "consequence",
+      "cluster_name_cn": "后果变量",
+      "terms": [ ... ]
+    },
+    {
+      "cluster_type": "moderator",
+      "cluster_name_cn": "调节因素",
+      "terms": [ ... ]
+    },
+    {
+      "cluster_type": "measurement_model",
+      "cluster_name_cn": "测量模型",
+      "terms": [
+        {
+          "name_cn": "模型或方法名称",
+          "name_en": "English Term",
+          "relation_hint": ""
+        }
+      ]
+    },
+    {
+      "cluster_type": "data_source",
+      "cluster_name_cn": "常用数据源",
+      "terms": [
+        {
+          "name_cn": "CSMAR-利润表-营业成本",
+          "name_en": "",
+          "relation_hint": "核心变量来源"
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "type": "emerging / controversy / reverse_thinking",
+      "prompt_cn": "极简灵感短语，不超过20字"
+    }
+  ]
+}
+
+禁止返回任何JSON之外的文字、markdown或解释。`;
+
+  const userPrompt = `术语："${term}"
+请围绕该术语，严格按照三层扩展要求，生成上述结构化JSON。`;
+
+  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.4,
+      max_tokens: 4000
     }),
     signal
   });
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`翻译 API 错误 (${resp.status}): ${text}`);
+    throw new Error(`API 错误 (${resp.status}): ${text}`);
   }
 
   const data = await resp.json();
   const content = data.choices?.[0]?.message?.content || '{}';
   const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('翻译返回格式异常');
+  if (!match) throw new Error('AI 返回格式异常，未找到 JSON 对象');
   const obj = JSON.parse(match[0]);
   return {
-    terms: obj.terms || results.terms,
-    theories: obj.theories || results.theories,
-    research_directions: obj.research_directions || results.research_directions,
-    variables: obj.variables || results.variables
+    core_term_cn: obj.core_term_cn || term,
+    core_term_en: obj.core_term_en || '',
+    definition_cn: obj.definition_cn || '',
+    synonyms: obj.synonyms || [],
+    relation_clusters: obj.relation_clusters || [],
+    gaps: obj.gaps || []
   };
 }
 

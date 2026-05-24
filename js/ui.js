@@ -69,16 +69,6 @@ function renderCenter(topic) {
         ${tags.map((t, i) => `<span class="tag${i===0?' highlight':''}">${t}</span>`).join('')}
       </div>
     </div>
-    <div class="term-block" id="termBlock">
-      <span class="term-block-label">术语拓展</span>
-      <div class="term-tags" id="termTags">
-        ${topicTerms.map(t => `
-          <span class="term-tag">${t.term}<span class="term-del" data-id="${t.id}">&times;</span></span>
-        `).join('')}
-      </div>
-      <button class="btn" id="btnAddTerm">+ 新建</button>
-      <button class="btn" id="btnAiExpand" title="AI 智能拓展术语">&#10025; AI 拓展</button>
-    </div>
     <div class="research-dashboard" id="researchDashboard">
       ${cardDefs.map(c => `
         <div class="research-card${activeCard === c.key ? ' active' : ''}" data-card="${c.key}">
@@ -102,34 +92,91 @@ function renderCenter(topic) {
     renderCenter(getSelectedTopic());
   });
 
-  document.getElementById('btnAddTerm').addEventListener('click', function() {
-    showTermModal(function(term) {
-      const t = getSelectedTopic();
-      termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term });
-      t.modifiedAt = Date.now();
-      saveAll();
-      renderCenter(t);
+  rebindOutlineEvents();
+  renderRightPanel(topic);
+}
+
+function renderRightPanel(topic) {
+  const panel = document.getElementById('rightPanel');
+  if (!panel) return;
+  const tid = topic ? topic.id : null;
+  const allTerms = tid ? getTermExpansions(tid) : [];
+
+  const synonyms = allTerms.filter(t => !t.category || t.category === 'term' || t.category === 'synonym');
+  const clusters = allTerms.filter(t => t.category === 'cluster');
+  const gaps = allTerms.filter(t => t.category === 'gap');
+
+  function renderTags(terms, tagClass) {
+    if (!terms.length) return '<div class="right-panel-empty">暂无</div>';
+    return terms.map(t =>
+      `<span class="term-tag ${tagClass}">${escapeHtml(t.term)}<span class="term-del" data-id="${t.id}">&times;</span></span>`
+    ).join('');
+  }
+
+  panel.innerHTML = `
+    <div class="right-panel-header">
+      <div class="right-panel-topic">${escapeHtml(topic ? topic.name : '')}</div>
+      <div class="right-panel-subtitle">术语知识网络</div>
+    </div>
+    <div class="right-panel-section section-syn">
+      <div class="right-panel-section-title">
+        术语词库<button class="btn-add-section" data-cat="term" title="添加术语">+</button>
+      </div>
+      <div class="term-tags" id="sectionSynonyms">${renderTags(synonyms, 'tag-syn')}</div>
+    </div>
+    <div class="right-panel-section section-cluster">
+      <div class="right-panel-section-title">
+        关系网络<button class="btn-add-section" data-cat="cluster" title="添加关系术语">+</button>
+      </div>
+      <div class="term-tags" id="sectionClusters">${renderTags(clusters, 'tag-cluster')}</div>
+    </div>
+    <div class="right-panel-section section-gap">
+      <div class="right-panel-section-title">
+        研究缺口<button class="btn-add-section" data-cat="gap" title="添加研究缺口">+</button>
+      </div>
+      <div class="term-tags" id="sectionGaps">${renderTags(gaps, 'tag-gap')}</div>
+    </div>
+    <div class="right-panel-actions">
+      <button class="btn" id="btnAiExpand" title="AI 智能拓展术语">AI 拓展</button>
+    </div>
+  `;
+
+  // Bind term delete + search click
+  panel.querySelectorAll('.term-tags').forEach(section => {
+    section.addEventListener('click', function(e) {
+      const del = e.target.closest('.term-del');
+      if (del) {
+        const id = parseInt(del.dataset.id);
+        termExpansions = termExpansions.filter(x => x.id !== id);
+        const t = getSelectedTopic();
+        t.modifiedAt = Date.now();
+        saveAll();
+        renderRightPanel(t);
+        return;
+      }
+      const tag = e.target.closest('.term-tag');
+      if (tag) {
+        showTermSearchModal(tag.textContent.replace('×', '').trim());
+      }
     });
   });
-  document.getElementById('btnAiExpand').addEventListener('click', showAiExpandModal);
-  document.getElementById('termTags').addEventListener('click', function(e) {
-    const del = e.target.closest('.term-del');
-    if (del) {
-      const id = parseInt(del.dataset.id);
-      termExpansions = termExpansions.filter(x => x.id !== id);
-      const t = getSelectedTopic();
-      t.modifiedAt = Date.now();
-      saveAll();
-      renderCenter(t);
-      return;
-    }
-    const tag = e.target.closest('.term-tag');
-    if (tag) {
-      showTermSearchModal(tag.textContent.replace('×', '').trim());
-    }
+
+  // Bind per-section "+" buttons
+  panel.querySelectorAll('.btn-add-section').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const cat = this.dataset.cat;
+      showTermModal(cat, function(term) {
+        const t = getSelectedTopic();
+        termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term, category: cat });
+        t.modifiedAt = Date.now();
+        saveAll();
+        renderRightPanel(t);
+      });
+    });
   });
 
-  rebindOutlineEvents();
+  panel.querySelector('#btnAiExpand').addEventListener('click', showAiExpandModal);
 }
 
 function renderPapers(papersList) {
@@ -214,12 +261,14 @@ function renderCardDetail(tid) {
   }
 }
 
-function showTermModal(onSave) {
+function showTermModal(category, onSave) {
+  const catLabels = { term: '术语词库', synonym: '术语词库', cluster: '关系网络', gap: '研究缺口' };
+  const catLabel = catLabels[category] || '术语词库';
   const overlay = document.createElement('div');
   overlay.className = 'term-modal-overlay';
   overlay.innerHTML = `
     <div class="term-modal">
-      <div class="term-modal-title">添加术语</div>
+      <div class="term-modal-title">添加到 · ${catLabel}</div>
       <div class="term-modal-desc">输入与当前研究主题相关的学术术语，帮助拓展研究视野</div>
       <input type="text" id="termModalInput" placeholder="例如：信息不对称、代理成本、调整成本..." autofocus>
       <div class="term-modal-actions">
@@ -233,19 +282,36 @@ function showTermModal(onSave) {
   const input = overlay.querySelector('#termModalInput');
   const close = () => overlay.remove();
 
-  overlay.querySelector('#termModalCancel').addEventListener('click', close);
-  overlay.querySelector('#termModalSave').addEventListener('click', function() {
+  const saveBtn = overlay.querySelector('#termModalSave');
+  const cancelBtn = overlay.querySelector('#termModalCancel');
+
+  async function doSave(term) {
+    const config = loadAiConfig();
+    if (config.apiKey && config.baseUrl && config.model) {
+      input.disabled = true;
+      saveBtn.disabled = true;
+      saveBtn.textContent = '翻译中...';
+      try {
+        term = await translateTerm(term, config);
+      } catch (e) {
+        // Fallback: use original term if translation fails
+      }
+    }
+    onSave(term);
+    close();
+  }
+
+  cancelBtn.addEventListener('click', close);
+  saveBtn.addEventListener('click', function() {
     const val = input.value.trim();
     if (!val) { input.focus(); return; }
-    onSave(val);
-    close();
+    doSave(val);
   });
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       const val = input.value.trim();
       if (!val) return;
-      onSave(val);
-      close();
+      doSave(val);
     } else if (e.key === 'Escape') {
       close();
     }
@@ -406,7 +472,7 @@ function parseTermParts(text) {
 function showAiExpandModal() {
   const config = loadAiConfig();
   let step = 1; // 1: input term, 2: config, 3: loading/results
-  let aiResults = { terms: [], theories: [], research_directions: [], variables: [] };
+  let aiResults = { core_term_cn: '', core_term_en: '', definition_cn: '', synonyms: [], relation_clusters: [], gaps: [] };
   let termInput = document.getElementById('searchInput').value.trim();
   let abortController = null;
 
@@ -419,7 +485,7 @@ function showAiExpandModal() {
 
     if (step === 1) {
       bodyHtml = `
-        <div class="ai-modal-step-desc">输入一个核心概念，AI 将围绕它拓展相关学术术语</div>
+        <div class="ai-modal-step-desc">输入一个学术术语，AI 将生成结构化的知识网络</div>
         <label>研究关键词</label>
         <input type="text" id="aiTermInput" value="${escapeHtml(termInput)}" placeholder="例如：成本粘性、ESG...">
         <div class="ai-modal-config-toggle" id="aiConfigToggle">&#9881; 配置 API（模型、地址、密钥）</div>
@@ -447,32 +513,64 @@ function showAiExpandModal() {
       bodyHtml = `
         <div class="ai-modal-loading">
           <div class="ai-modal-spinner"></div>
-          <div>AI 正在分析"${escapeHtml(termInput)}"...</div>
+          <div>正在分析"${escapeHtml(termInput)}"...</div>
         </div>
       `;
       actionsHtml = `<button class="btn btn-cancel" id="aiBtnAbort">取消</button>`;
     } else if (step === 4) {
-      const sections = [
-        { key: 'terms', label: '学术术语' },
-        { key: 'theories', label: '理论名称' },
-        { key: 'research_directions', label: '研究方向' },
-        { key: 'variables', label: '变量相关' }
-      ];
+      let flatItems = [];
       let resultHtml = '';
-      sections.forEach(sec => {
-        const items = aiResults[sec.key] || [];
-        if (!items.length) return;
-        resultHtml += `<div class="ai-result-section-title">${sec.label}</div>`;
-        items.forEach((t, i) => {
-          resultHtml += `
-            <label class="ai-result-item">
-              <input type="checkbox" data-cat="${sec.key}" data-idx="${i}" checked>
-              <span>${escapeHtml(t)}</span>
-            </label>`;
+
+      // Core header
+      resultHtml += `<div style="font-weight:700;font-size:16px;margin-bottom:2px">${escapeHtml(aiResults.core_term_cn || termInput)}${aiResults.core_term_en ? ' <span style="font-weight:400;color:var(--text-tertiary);font-size:14px">(' + escapeHtml(aiResults.core_term_en) + ')</span>' : ''}</div>`;
+      if (aiResults.definition_cn) {
+        resultHtml += `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.5">${escapeHtml(aiResults.definition_cn)}</div>`;
+      }
+
+      // Layer 1: Synonyms
+      const syns = aiResults.synonyms || [];
+      if (syns.length) {
+        resultHtml += `<div class="ai-result-section-title">第一层 · 基础词库式扩展</div>`;
+        syns.forEach((s, i) => {
+          const label = s.name_cn + (s.name_en ? ' (' + s.name_en + ')' : '');
+          const hint = s.relation_type ? ` <span style="color:var(--text-tertiary);font-size:11px">${escapeHtml(s.relation_type)}</span>` : '';
+          flatItems.push({ sec: 'syn', idx: i, text: label, category: 'synonym' });
+          resultHtml += `<label class="ai-result-item"><input type="checkbox" data-fi="${flatItems.length - 1}" checked><span>${escapeHtml(label)}${hint}</span></label>`;
+        });
+      }
+
+      // Layer 2: Relation Clusters
+      (aiResults.relation_clusters || []).forEach(cluster => {
+        if (!(cluster.terms || []).length) return;
+        resultHtml += `<div class="ai-result-section-title">第二层 · ${escapeHtml(cluster.cluster_name_cn || cluster.cluster_type)}</div>`;
+        cluster.terms.forEach((t, i) => {
+          const label = t.name_cn + (t.name_en ? ' (' + t.name_en + ')' : '');
+          const hint = t.relation_hint ? ` <span style="color:var(--text-tertiary);font-size:11px">— ${escapeHtml(t.relation_hint)}</span>` : '';
+          flatItems.push({ sec: 'cluster', key: cluster.cluster_type, idx: i, text: label, category: 'cluster' });
+          resultHtml += `<label class="ai-result-item"><input type="checkbox" data-fi="${flatItems.length - 1}" checked><span>${escapeHtml(label)}${hint}</span></label>`;
         });
       });
+
+      // Layer 3: Gaps
+      const gaps = aiResults.gaps || [];
+      if (gaps.length) {
+        resultHtml += `<div class="ai-result-section-title">第三层 · 启发性"缺口"式扩展</div>`;
+        const typeLabels = { emerging: '新兴方向', controversy: '争议地带', reverse_thinking: '反向思维' };
+        gaps.forEach((g, i) => {
+          const typeLabel = typeLabels[g.type] || g.type;
+          const label = `[${typeLabel}] ${g.prompt_cn}`;
+          flatItems.push({ sec: 'gap', idx: i, text: label, category: 'gap' });
+          resultHtml += `<label class="ai-result-item"><input type="checkbox" data-fi="${flatItems.length - 1}" checked><span>${escapeHtml(label)}</span></label>`;
+        });
+      }
+
+      if (!flatItems.length) {
+        resultHtml += `<div style="color:var(--text-tertiary);text-align:center;padding:24px">AI 未返回可保存的术语</div>`;
+      }
+
+      overlay._flatItems = flatItems;
       bodyHtml = `
-        <label>AI 返回的术语（勾选你想要保存的）</label>
+        <label>AI 术语知识网络</label>
         <div style="display:flex;gap:6px;margin-bottom:6px">
           <button class="btn" id="aiSelectAll" style="height:26px;font-size:12px;padding:0 10px">全选</button>
           <button class="btn" id="aiInvert" style="height:26px;font-size:12px;padding:0 10px">反选</button>
@@ -512,20 +610,15 @@ function showAiExpandModal() {
     let errorMsg = '';
     try {
       aiResults = await callAiExpand(termInput, config, abortController.signal);
-      overlay.querySelector('.ai-modal-body').innerHTML =
-        `<div class="ai-modal-loading"><div class="ai-modal-spinner"></div><div>正在进行学术翻译...</div></div>`;
-      try {
-        aiResults = await translateAiResults(aiResults, config, abortController.signal);
-      } catch (transErr) {
-        console.warn('Translation failed, using original results:', transErr);
-      }
-      const hasAny = aiResults.terms.length + aiResults.theories.length + aiResults.research_directions.length + aiResults.variables.length > 0;
+      const hasAny = (aiResults.synonyms || []).length > 0
+        || (aiResults.relation_clusters || []).some(c => (c.terms || []).length > 0)
+        || (aiResults.gaps || []).length > 0;
       step = hasAny ? 4 : 5;
       if (step === 5) errorMsg = 'AI 未返回任何术语，请尝试换个关键词或调整模型。';
     } catch (err) {
       if (err.name === 'AbortError') return;
       step = 5;
-      aiResults = { terms: [], theories: [], research_directions: [], variables: [] };
+      aiResults = { core_term_cn: '', core_term_en: '', definition_cn: '', synonyms: [], relation_clusters: [], gaps: [] };
       errorMsg = err.message;
     }
     render();
@@ -568,6 +661,7 @@ function showAiExpandModal() {
         config.apiKey = overlay.querySelector('#aiApiKey').value.trim();
         config.baseUrl = overlay.querySelector('#aiBaseUrl').value.trim();
         config.model = overlay.querySelector('#aiModel').value.trim();
+        if (!termInput) { step = 1; render(); return; }
         if (!config.apiKey) { alert('请输入 API 密钥'); return; }
         if (!config.baseUrl) { alert('请输入 API 地址'); return; }
         if (!config.model) { alert('请输入模型名称'); return; }
@@ -598,13 +692,14 @@ function showAiExpandModal() {
         const checks = overlay.querySelectorAll('#aiResultsList input:checked');
         if (checks.length === 0) { overlay.remove(); return; }
         const t = getSelectedTopic();
+        const items = overlay._flatItems || [];
         checks.forEach(cb => {
-          const term = aiResults[cb.dataset.cat][parseInt(cb.dataset.idx)];
-          termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term });
+          const item = items[parseInt(cb.dataset.fi)];
+          if (item) termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term: item.text, category: item.category || 'term' });
         });
         t.modifiedAt = Date.now();
         saveAll();
-        renderCenter(t);
+        renderRightPanel(t);
         overlay.remove();
       };
     } else if (step === 5) {
