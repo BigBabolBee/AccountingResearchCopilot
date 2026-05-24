@@ -549,6 +549,108 @@ main {
   font-size: 11px;
   color: var(--text-tertiary);
 }
+
+/* ── Term Expansion Block ── */
+.term-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.term-block-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.term-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.term-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: #e8f0fe;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #3b5998;
+  cursor: default;
+  user-select: none;
+}
+.term-tag .term-del {
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.5;
+  line-height: 1;
+}
+.term-tag .term-del:hover { opacity: 1; }
+.term-block .btn {
+  flex-shrink: 0;
+}
+
+/* ── Term Modal ── */
+.term-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.term-modal {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px 28px;
+  width: 420px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+.term-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.term-modal-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
+.term-modal input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  font-size: 14px;
+  font-family: var(--font);
+  outline: none;
+  margin-bottom: 16px;
+}
+.term-modal input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(47,47,47,0.08);
+}
+.term-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn-cancel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.btn-cancel:hover { background: var(--border); }
 </style>
 </head>
 <body>
@@ -561,11 +663,12 @@ main {
   </div>
   <div class="header-search">
     <span class="search-icon">&#9906;</span>
-    <input type="text" id="searchInput" placeholder="输入研究问题，如：ESG 对成本粘性的影响..." value="ESG 如何影响成本粘性">
+    <input type="text" id="searchInput" placeholder="输入研究问题，如：ESG 对成本粘性的影响...">
   </div>
   <div class="header-actions">
-    <button class="btn" onclick="handleSearch()">&#128269; 搜索</button>
     <button class="btn btn-primary" onclick="handleNewResearch()">+ 新建研究</button>
+    <button class="btn" onclick="handleSearch()">&#128269; 搜索</button>
+    <button class="btn" onclick="handleImport()">&#10514; 导入</button>
     <button class="btn" onclick="handleExport()">&#10515; 导出</button>
   </div>
 </header>
@@ -585,124 +688,114 @@ main {
   </aside>
 
   <!-- ─── CENTER ─── -->
-  <section class="center" id="centerArea">
-    <!-- Block 1: Research Question -->
-    <div class="question-block">
-      <div class="question-title" id="questionTitle">ESG 如何影响成本粘性</div>
-      <div class="question-tags" id="questionTags">
-        <span class="tag highlight">sticky costs</span>
-        <span class="tag">agency theory</span>
-        <span class="tag">ESG disclosure</span>
-        <span class="tag">cost behavior</span>
-        <span class="tag">sustainability</span>
-        <span class="tag">corporate governance</span>
-      </div>
-    </div>
-
-    <!-- Block 2: Paper List -->
-    <div class="papers-section">
-      <div class="papers-section-header">
-        <span class="papers-section-title">相关论文</span>
-        <span class="papers-count" id="paperCount">共 6 篇</span>
-      </div>
-      <div class="paper-list" id="paperList">
-        <!-- Papers rendered by JS -->
-      </div>
-    </div>
-
-    <!-- Block 3: Topic Categories -->
-    <div class="topics-block">
-      <div class="topics-block-title">研究主题分类</div>
-      <div class="topic-chips" id="topicChips">
-        <div class="topic-chip active" data-topic="all">全部</div>
-        <div class="topic-chip" data-topic="formation">成本粘性形成机制</div>
-        <div class="topic-chip" data-topic="esg">ESG 影响</div>
-        <div class="topic-chip" data-topic="digital">数字化转型</div>
-        <div class="topic-chip" data-topic="governance">公司治理</div>
-      </div>
-    </div>
-
-    <!-- Block 4: Outline -->
-    <div class="outline-block">
-      <div class="outline-title">综述大纲</div>
-      <div class="outline-tree">
-        <div class="outline-node l1">1. 引言</div>
-        <div class="outline-node l2">1.1 研究背景与意义</div>
-        <div class="outline-node l3">成本粘性现象的发现与演进</div>
-        <div class="outline-node l1">2. 成本粘性的理论基础</div>
-        <div class="outline-node l2">2.1 代理理论视角</div>
-        <div class="outline-node l2">2.2 资源调整成本</div>
-        <div class="outline-node l1">3. ESG 对成本粘性的影响机制</div>
-        <div class="outline-node l2">3.1 信息披露与透明度</div>
-        <div class="outline-node l2">3.2 利益相关者压力</div>
-        <div class="outline-node l2">3.3 融资约束缓解</div>
-        <div class="outline-node l1">4. 未来研究方向</div>
-        <div class="outline-node l2">4.1 ESG 维度差异化影响</div>
-        <div class="outline-node l2">4.2 跨文化与制度比较</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── INSIGHTS PANEL (removed, area merged into center) ─── -->
+  <section class="center" id="centerArea"></section>
 </main>
 
 <script>
-// ═══════════════════════ DATA MODEL ═══════════════════════
-let nextId = 2;
+// ═══════════════════════ ENTITY DATA MODEL ═══════════════════════
+const STORAGE_KEY = 'accounting_research_copilot_v2';
 
-const defaultPapers = [
-  { id: 1, title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021. We find that better ESG performance significantly reduces cost stickiness, and this effect is more pronounced in firms with higher agency costs and weaker external monitoring.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory", topic: "esg" },
-  { id: 2, title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior. Using a difference-in-differences design around mandatory ESG disclosure regulation, we document that enhanced transparency reduces managerial empire-building incentives, thereby lowering cost stickiness.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory", topic: "esg" },
-  { id: 3, title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness, demonstrating that SG&A costs increase more when activity rises than they decrease when activity falls by an equivalent amount.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory", topic: "formation" },
-  { id: 4, title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures. We find that digital adoption increases cost flexibility and reduces stickiness, especially for labor costs.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View", topic: "digital" },
-  { id: 5, title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms. Results show that larger boards and higher board independence are associated with reduced cost stickiness.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory", topic: "governance" },
-  { id: 6, title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior. Green innovation creates specialized resources that increase cost stickiness in the short run but reduce it in the long run.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory", topic: "esg" }
-];
+// ── Entity arrays ──
+let topics = [];
+let papers = [];
+let theories = [];
+let variables = [];
+let methods = [];
+let structures = [];
+let termExpansions = [];
 
-const defaultTopicData = {
-  papers: defaultPapers,
-  theories: ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"],
-  variables: [
-    { name: "ESG Score", role: "自变量" },
-    { name: "Cost Stickiness", role: "因变量" },
-    { name: "Firm Size", role: "控制变量" },
-    { name: "Leverage", role: "控制变量" },
-    { name: "ROA", role: "控制变量" },
-    { name: "Board Size", role: "调节变量" }
-  ],
-  methods: ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"],
-  structure: ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
-};
+const nextIds = { topics: 1, papers: 1, theories: 1, variables: 1, methods: 1, structures: 1, termExpansions: 1 };
 
-const researchTopics = [
-  {
-    id: 1,
-    name: "ESG 如何影响成本粘性",
-    createdAt: Date.now() - 3600000,
-    modifiedAt: Date.now() - 3600000,
-    data: JSON.parse(JSON.stringify(defaultTopicData))
-  }
-];
+function nextIdFor(entity) { return nextIds[entity]++; }
 
-let selectedTopicId = 1;
-let activeCard = 'papers'; // currently expanded card section
+// ── Entity getters ──
+function getPapers(topicId)       { return papers.filter(p => p.topicId === topicId); }
+function getTheories(topicId)     { return theories.filter(t => t.topicId === topicId); }
+function getVariables(topicId)    { return variables.filter(v => v.topicId === topicId); }
+function getMethods(topicId)      { return methods.filter(m => m.topicId === topicId); }
+function getStructures(topicId)   { return structures.filter(s => s.topicId === topicId).sort((a,b) => a.sortOrder - b.sortOrder); }
+function getTermExpansions(topicId) { return termExpansions.filter(t => t.topicId === topicId); }
+
+// ── Default seed data ──
+function seedDefaultData() {
+  const now = Date.now();
+  const tid = nextIdFor('topics');
+  topics.push({ id: tid, name: "ESG 如何影响成本粘性", createdAt: now, modifiedAt: now });
+
+  const paperData = [
+    { title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021. We find that better ESG performance significantly reduces cost stickiness, and this effect is more pronounced in firms with higher agency costs and weaker external monitoring.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory", topic: "esg" },
+    { title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior. Using a difference-in-differences design around mandatory ESG disclosure regulation, we document that enhanced transparency reduces managerial empire-building incentives, thereby lowering cost stickiness.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory", topic: "esg" },
+    { title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness, demonstrating that SG&A costs increase more when activity rises than they decrease when activity falls by an equivalent amount.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory", topic: "formation" },
+    { title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures. We find that digital adoption increases cost flexibility and reduces stickiness, especially for labor costs.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View", topic: "digital" },
+    { title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms. Results show that larger boards and higher board independence are associated with reduced cost stickiness.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory", topic: "governance" },
+    { title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior. Green innovation creates specialized resources that increase cost stickiness in the short run but reduce it in the long run.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory", topic: "esg" }
+  ];
+  paperData.forEach(p => papers.push({ id: nextIdFor('papers'), topicId: tid, ...p }));
+
+  ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"]
+    .forEach(t => theories.push({ id: nextIdFor('theories'), topicId: tid, name: t }));
+
+  [
+    { name: "ESG Score", role: "自变量" }, { name: "Cost Stickiness", role: "因变量" },
+    { name: "Firm Size", role: "控制变量" }, { name: "Leverage", role: "控制变量" },
+    { name: "ROA", role: "控制变量" }, { name: "Board Size", role: "调节变量" }
+  ].forEach(v => variables.push({ id: nextIdFor('variables'), topicId: tid, ...v }));
+
+  ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"]
+    .forEach(m => methods.push({ id: nextIdFor('methods'), topicId: tid, name: m }));
+
+  ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
+    .forEach((s, i) => structures.push({ id: nextIdFor('structures'), topicId: tid, name: s, sortOrder: i }));
+
+  ["ESG 评级", "成本粘性", "代理成本", "信息不对称", "利益相关者", "调整成本"]
+    .forEach(t => termExpansions.push({ id: nextIdFor('termExpansions'), topicId: tid, term: t }));
+}
+
+// ── Persistence ──
+function saveAll() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    nextIds, topics, papers, theories, variables, methods, structures, termExpansions
+  }));
+}
+
+function loadAll() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return false;
+  const d = JSON.parse(raw);
+  Object.assign(nextIds, d.nextIds || {});
+  topics = d.topics || [];
+  papers = d.papers || [];
+  theories = d.theories || [];
+  variables = d.variables || [];
+  methods = d.methods || [];
+  structures = d.structures || [];
+  termExpansions = d.termExpansions || [];
+  return topics.length > 0;
+}
+
+// Init data
+if (!loadAll()) {
+  seedDefaultData();
+  saveAll();
+}
+
+let selectedTopicId = topics[0] ? topics[0].id : null;
+let activeCard = 'papers';
 
 // ═══════════════════════ SIDEBAR ═══════════════════════
 function renderSidebar() {
   const topicList = document.getElementById('topicList');
   const recentList = document.getElementById('recentList');
 
-  // 研究主题 — sorted by creation order
-  const topicsByCreation = [...researchTopics].sort((a, b) => a.createdAt - b.createdAt);
-  topicList.innerHTML = topicsByCreation.map(t => `
+  const byCreation = [...topics].sort((a, b) => a.createdAt - b.createdAt);
+  topicList.innerHTML = byCreation.map(t => `
     <div class="sidebar-item${t.id === selectedTopicId ? ' active' : ''}" data-topic-id="${t.id}">
       ${t.name}
     </div>
   `).join('') || '<div class="sidebar-item" style="color:var(--text-tertiary)">暂无研究主题</div>';
 
-  // 最近研究 — top 10 by modifiedAt desc
-  const recentTopics = [...researchTopics].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 10);
-  recentList.innerHTML = recentTopics.map(t => `
+  const byModified = [...topics].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 10);
+  recentList.innerHTML = byModified.map(t => `
     <div class="sidebar-item${t.id === selectedTopicId ? ' active' : ''}" data-topic-id="${t.id}">
       <span class="dot" style="background:${t.id === selectedTopicId ? 'var(--accent)' : '#ccc'}"></span>
       ${t.name}
@@ -711,7 +804,7 @@ function renderSidebar() {
 }
 
 function getSelectedTopic() {
-  return researchTopics.find(t => t.id === selectedTopicId);
+  return topics.find(t => t.id === selectedTopicId);
 }
 
 function selectTopic(id) {
@@ -719,6 +812,7 @@ function selectTopic(id) {
   const topic = getSelectedTopic();
   if (!topic) return;
   topic.modifiedAt = Date.now();
+  saveAll();
   document.getElementById('searchInput').value = topic.name;
   renderSidebar();
   renderCenter(topic);
@@ -735,17 +829,18 @@ const cardDefs = [
 
 function renderCenter(topic) {
   const center = document.getElementById('centerArea');
-  const tags = topic.data.papers.slice(0, 4).map(p => p.tags[0]).filter((v, i, a) => a.indexOf(v) === i);
+  const tid = topic.id;
+  const topicPapers = getPapers(tid);
+  const tags = topicPapers.slice(0, 4).map(p => p.tags[0]).filter((v, i, a) => a.indexOf(v) === i);
+  const topicTerms = getTermExpansions(tid);
 
   let papersHtml = '';
   let detailHtml = '';
 
-  const showPapers = !activeCard;
-
-  if (showPapers) {
+  if (!activeCard) {
     papersHtml = `<div class="paper-list" id="paperList"></div>`;
   } else {
-    detailHtml = renderCardDetail(topic);
+    detailHtml = renderCardDetail(tid);
   }
 
   center.innerHTML = `
@@ -754,6 +849,16 @@ function renderCenter(topic) {
       <div class="question-tags" id="questionTags">
         ${tags.map((t, i) => `<span class="tag${i===0?' highlight':''}">${t}</span>`).join('')}
       </div>
+    </div>
+    <div class="term-block" id="termBlock">
+      <span class="term-block-label">术语拓展</span>
+      <div class="term-tags" id="termTags">
+        ${topicTerms.map(t => `
+          <span class="term-tag">${t.term}<span class="term-del" data-id="${t.id}">&times;</span></span>
+        `).join('')}
+      </div>
+      <button class="btn" id="btnAddTerm">+ 新建</button>
+      <button class="btn" id="btnAiExpand" title="AI 智能拓展术语">&#10025; AI 拓展</button>
     </div>
     <div class="research-dashboard" id="researchDashboard">
       ${cardDefs.map(c => `
@@ -768,29 +873,46 @@ function renderCenter(topic) {
     ${papersHtml}
   `;
 
-  renderPapers(topic.data.papers);
+  renderPapers(topicPapers);
 
-  // Bind dashboard card clicks
   document.getElementById('researchDashboard').addEventListener('click', function(e) {
     const card = e.target.closest('.research-card');
     if (!card) return;
     const key = card.dataset.card;
-    if (activeCard === key) {
-      activeCard = null;
-    } else {
-      activeCard = key;
-    }
+    activeCard = (activeCard === key) ? null : key;
     renderCenter(getSelectedTopic());
   });
 
-  // Re-bind outline clicks (used in card detail)
+  document.getElementById('btnAddTerm').addEventListener('click', function() {
+    showTermModal(function(term) {
+      const t = getSelectedTopic();
+      termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term });
+      t.modifiedAt = Date.now();
+      saveAll();
+      renderCenter(t);
+    });
+  });
+  document.getElementById('btnAiExpand').addEventListener('click', function() {
+    alert('AI 拓展功能开发中');
+  });
+  document.getElementById('termTags').addEventListener('click', function(e) {
+    const del = e.target.closest('.term-del');
+    if (!del) return;
+    const id = parseInt(del.dataset.id);
+    termExpansions = termExpansions.filter(x => x.id !== id);
+    const t = getSelectedTopic();
+    t.modifiedAt = Date.now();
+    saveAll();
+    renderCenter(t);
+  });
+
   rebindOutlineEvents();
 }
 
-function renderPapers(papers) {
+function renderPapers(papersList) {
   const container = document.getElementById('paperList');
   if (!container) return;
-  container.innerHTML = papers.map(p => `
+  container.innerHTML = papersList.map(p => `
     <div class="paper-card" data-id="${p.id}">
       <div class="paper-card-header">
         <div class="paper-title">${p.title}</div>
@@ -824,9 +946,7 @@ function renderPapers(papers) {
   });
 }
 
-function renderCardDetail(topic) {
-  const data = topic.data;
-
+function renderCardDetail(tid) {
   switch (activeCard) {
     case 'papers':
       return `
@@ -839,7 +959,7 @@ function renderCardDetail(topic) {
         <div class="detail-block">
           <div class="detail-block-title">理论列表</div>
           <div class="detail-list">
-            ${data.theories.map(t => `<div class="detail-item"><span class="bullet"></span> ${t}</div>`).join('')}
+            ${getTheories(tid).map(t => `<div class="detail-item"><span class="bullet"></span> ${t.name}</div>`).join('')}
           </div>
         </div>`;
     case 'variables':
@@ -847,7 +967,7 @@ function renderCardDetail(topic) {
         <div class="detail-block">
           <div class="detail-block-title">变量列表</div>
           <div class="detail-list">
-            ${data.variables.map(v => `<div class="detail-item"><span class="bullet"></span> ${v.name} <span class="var-role">(${v.role})</span></div>`).join('')}
+            ${getVariables(tid).map(v => `<div class="detail-item"><span class="bullet"></span> ${v.name} <span class="var-role">(${v.role})</span></div>`).join('')}
           </div>
         </div>`;
     case 'methods':
@@ -855,7 +975,7 @@ function renderCardDetail(topic) {
         <div class="detail-block">
           <div class="detail-block-title">常用方法</div>
           <div class="detail-list">
-            ${data.methods.map(m => `<div class="detail-item"><span class="bullet"></span> ${m}</div>`).join('')}
+            ${getMethods(tid).map(m => `<div class="detail-item"><span class="bullet"></span> ${m.name}</div>`).join('')}
           </div>
         </div>`;
     case 'structure':
@@ -863,12 +983,52 @@ function renderCardDetail(topic) {
         <div class="detail-block">
           <div class="detail-block-title">综述结构</div>
           <div class="detail-list">
-            ${data.structure.map((s, i) => `<div class="detail-item"><span class="bullet"></span> ${i + 1}. ${s}</div>`).join('')}
+            ${getStructures(tid).map(s => `<div class="detail-item"><span class="bullet"></span> ${s.sortOrder + 1}. ${s.name}</div>`).join('')}
           </div>
         </div>`;
     default:
       return '';
   }
+}
+
+function showTermModal(onSave) {
+  const overlay = document.createElement('div');
+  overlay.className = 'term-modal-overlay';
+  overlay.innerHTML = `
+    <div class="term-modal">
+      <div class="term-modal-title">添加术语</div>
+      <div class="term-modal-desc">输入与当前研究主题相关的学术术语，帮助拓展研究视野</div>
+      <input type="text" id="termModalInput" placeholder="例如：信息不对称、代理成本、调整成本..." autofocus>
+      <div class="term-modal-actions">
+        <button class="btn btn-cancel" id="termModalCancel">取消</button>
+        <button class="btn btn-primary" id="termModalSave">保存</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = overlay.querySelector('#termModalInput');
+  const close = () => overlay.remove();
+
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+  overlay.querySelector('#termModalCancel').addEventListener('click', close);
+  overlay.querySelector('#termModalSave').addEventListener('click', function() {
+    const val = input.value.trim();
+    if (!val) { input.focus(); return; }
+    onSave(val);
+    close();
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      const val = input.value.trim();
+      if (!val) return;
+      onSave(val);
+      close();
+    } else if (e.key === 'Escape') {
+      close();
+    }
+  });
+  input.focus();
 }
 
 function rebindOutlineEvents() {
@@ -885,65 +1045,86 @@ function rebindOutlineEvents() {
 }
 
 // ═══════════════════════ HEADER BUTTONS ═══════════════════════
-function handleSearch() {
-  alert('实现中');
-}
+function handleSearch() { alert('实现中'); }
 
 function handleNewResearch() {
   const q = document.getElementById('searchInput').value.trim();
-  if (!q) {
-    alert('请输入研究主题');
-    return;
-  }
+  if (!q) { alert('请输入研究主题'); return; }
 
-  // Check if topic already exists
-  const existing = researchTopics.find(t => t.name === q);
-  if (existing) {
-    selectTopic(existing.id);
-    return;
-  }
+  const existing = topics.find(t => t.name === q);
+  if (existing) { selectTopic(existing.id); return; }
 
-  // Create new topic
-  const newTopic = {
-    id: nextId++,
-    name: q,
-    createdAt: Date.now(),
-    modifiedAt: Date.now(),
-    data: {
-      papers: [],
-      theories: [],
-      variables: [],
-      methods: [],
-      structure: ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
-    }
-  };
-  researchTopics.push(newTopic);
-  activeCard = null;
-  selectTopic(newTopic.id);
+  const tid = nextIdFor('topics');
+  const now = Date.now();
+  topics.push({ id: tid, name: q, createdAt: now, modifiedAt: now });
+  ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
+    .forEach((s, i) => structures.push({ id: nextIdFor('structures'), topicId: tid, name: s, sortOrder: i }));
+  saveAll();
+  activeCard = 'papers';
+  selectTopic(tid);
 }
 
 function handleExport() {
-  alert('导出功能：将导出当前研究综述为 Markdown / Word 格式。');
+  const data = JSON.stringify({ nextIds, topics, papers, theories, variables, methods, structures, termExpansions }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `research_data_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-// ═══════════════════════ SIDEBAR CLICK ═══════════════════════
+function handleImport() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!d.topics || !Array.isArray(d.topics)) { alert('文件格式不正确'); return; }
+        Object.assign(nextIds, d.nextIds || {});
+        topics = d.topics || [];
+        papers = d.papers || [];
+        theories = d.theories || [];
+        variables = d.variables || [];
+        methods = d.methods || [];
+        structures = d.structures || [];
+        termExpansions = d.termExpansions || [];
+        saveAll();
+        selectedTopicId = topics[0] ? topics[0].id : null;
+        activeCard = 'papers';
+        renderSidebar();
+        renderCenter(getSelectedTopic());
+      } catch (err) {
+        alert('文件解析失败：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ═══════════════════════ SIDEBAR & SEARCH ═══════════════════════
 document.querySelector('.sidebar').addEventListener('click', function(e) {
   const item = e.target.closest('.sidebar-item');
   if (!item) return;
   const id = parseInt(item.dataset.topicId);
   if (!id) return;
-  activeCard = null;
+  activeCard = 'papers';
   selectTopic(id);
 });
 
-// ═══════════════════════ SEARCH KEYDOWN ═══════════════════════
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    handleSearch();
-  }
+  if (e.key === 'Enter') handleSearch();
 });
 
 // ═══════════════════════ INIT ═══════════════════════
+if (topics.length > 0) selectedTopicId = topics[0].id;
 renderSidebar();
 renderCenter(getSelectedTopic());
 </script>
