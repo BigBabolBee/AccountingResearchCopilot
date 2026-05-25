@@ -295,9 +295,7 @@ main {
   font-size: 15px;
   font-weight: 700;
   color: var(--accent);
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
 }
 .term-list {
   display: flex;
