@@ -94,18 +94,29 @@ async function handleSignIn() {
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value.trim();
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
-  if (!window._supabaseClient) { showAuthError('服务未就绪，请刷新页面后重试'); return; }
   setAuthLoading(true);
-  console.log('signIn: starting request for', email);
+  console.log('signIn: fetch /token for', email);
   try {
-    const result = await Promise.race([
-      window._supabaseClient.auth.signInWithPassword({ email, password }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('请求超时，请检查网络连接')), 15000))
-    ]);
-    console.log('signIn: response received', result.error ? 'error=' + result.error.message : 'success');
-    if (result.error) { showAuthError(result.error.message); return; }
+    const resp = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email, password })
+    });
+    console.log('signIn: status', resp.status);
+    const json = await resp.json();
+    if (!resp.ok) {
+      showAuthError(json.msg || json.error_description || '登录失败');
+      return;
+    }
+    // setSession triggers onAuthStateChange which handles initData + initUI + showApp
+    console.log('signIn: calling setSession');
+    await window._supabaseClient.auth.setSession({
+      access_token: json.access_token,
+      refresh_token: json.refresh_token
+    });
+    console.log('signIn: done');
   } catch (e) {
-    console.error('signIn exception:', e);
+    console.error('signIn error:', e);
     showAuthError(e.message || '登录失败，请稍后重试');
   } finally {
     setAuthLoading(false);
