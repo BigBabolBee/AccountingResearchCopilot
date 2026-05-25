@@ -4,13 +4,13 @@ const db = (() => {
 
   async function loadAll() {
     if (!uid()) return;
+    // RLS handles ownership filtering — return own + shared topics & their data
     const tables = ['topics', 'papers', 'theories', 'variables', 'methods', 'structures', 'term_expansions'];
     for (const table of tables) {
-      const { data, error } = await supabase.from(table).select('*').eq('user_id', uid());
+      const { data, error } = await supabase.from(table).select('*');
       if (error) { console.error('loadAll ' + table, error); continue; }
       window['_' + table] = data || [];
     }
-    // Map to global arrays
     topics = (_topics || []).map(rowToTopic);
     papers = (_papers || []).map(rowToPaper);
     theories = (_theories || []).map(rowToTheory);
@@ -22,7 +22,7 @@ const db = (() => {
 
   // ── Row mappers (Supabase row → app model) ──
   function rowToTopic(r) {
-    return { id: r.id, name: r.name, createdAt: new Date(r.created_at).getTime(), modifiedAt: new Date(r.modified_at).getTime() };
+    return { id: r.id, name: r.name, userId: r.user_id, createdAt: new Date(r.created_at).getTime(), modifiedAt: new Date(r.modified_at).getTime() };
   }
   function rowToPaper(r) {
     return { id: r.id, topicId: r.topic_id, title: r.title, authors: r.authors, journal: r.journal, year: r.year, abstract: r.abstract, tags: r.tags || [], theory: r.theory };
@@ -158,6 +158,38 @@ const db = (() => {
     await remove('term_expansions', termId);
   }
 
+  // ── Topic Members (Sharing) ──
+  async function getTopicMembers(topicId) {
+    const { data, error } = await supabase.from('topic_members').select('*').eq('topic_id', topicId);
+    if (error || !data) { console.error(error); return []; }
+    if (!data.length) return [];
+    // Fetch emails from profiles
+    const userIds = data.map(m => m.user_id);
+    const { data: profiles } = await supabase.from('profiles').select('user_id, email, role').in('user_id', userIds);
+    const emailMap = {};
+    (profiles || []).forEach(p => { emailMap[p.user_id] = p.email; });
+    return data.map(m => ({ ...m, email: emailMap[m.user_id] || m.user_id }));
+  }
+
+  async function addTopicMember(topicId, memberUserId, memberRole, invitedBy) {
+    const id = newId();
+    const { error } = await supabase.from('topic_members').insert({
+      id, topic_id: topicId, user_id: memberUserId, role: memberRole, invited_by: invitedBy
+    });
+    if (error) { console.error(error); throw error; }
+  }
+
+  async function removeTopicMember(topicId, userId) {
+    const { error } = await supabase.from('topic_members').delete().eq('topic_id', topicId).eq('user_id', userId);
+    if (error) { console.error(error); throw error; }
+  }
+
+  async function lookupUserByEmail(email) {
+    const { data, error } = await supabase.rpc('lookup_user_by_email', { target_email: email });
+    if (error) { console.error(error); return null; }
+    return data && data.length > 0 ? data[0] : null;
+  }
+
   return {
     loadAll,
     // Topics
@@ -173,6 +205,8 @@ const db = (() => {
     // Structures
     createStructure, deleteStructure,
     // Term Expansions
-    createTermExpansion, deleteTermExpansion
+    createTermExpansion, deleteTermExpansion,
+    // Sharing
+    getTopicMembers, addTopicMember, removeTopicMember, lookupUserByEmail
   };
 })();

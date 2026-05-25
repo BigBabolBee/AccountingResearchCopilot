@@ -27,6 +27,15 @@
     <div class="auth-message" id="authMessage"></div>
     <input type="email" id="authEmail" placeholder="邮箱地址" autocomplete="email">
     <input type="password" id="authPassword" placeholder="密码" autocomplete="current-password">
+    <div id="authRoleGroup" style="display:none;margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">用户类型</label>
+      <select id="authRole" style="width:100%;height:40px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-size:14px;font-family:var(--font);outline:none;background:var(--surface);box-sizing:border-box">
+        <option value="researcher">研究者 (Researcher) — 普通在读科研人员</option>
+        <option value="group_leader">小组长 (Group Leader) — 日常任务带队协调</option>
+        <option value="co_investigator">小老板 (Co-Investigator) — 协助统筹、分管方向</option>
+        <option value="principal_investigator">大老板 (Principal Investigator) — 基金、课题最高负责人</option>
+      </select>
+    </div>
     <button class="auth-submit" id="authSubmitBtn" onclick="handleSignIn()">登录</button>
     <div class="auth-switch" id="authSwitchText">
       没有账号？<span class="auth-switch-link" onclick="switchAuthMode('signup')">去注册</span>

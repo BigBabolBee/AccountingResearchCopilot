@@ -9,9 +9,10 @@ function renderSidebar() {
   const recentList = document.getElementById('recentList');
 
   const byCreation = [...topics].sort((a, b) => a.createdAt - b.createdAt);
+  const uid = currentUser?.id;
   topicList.innerHTML = byCreation.map(t => `
     <div class="sidebar-item${t.id === selectedTopicId ? ' active' : ''}" data-topic-id="${t.id}">
-      ${t.name}
+      ${t.name}${t.userId !== uid ? ' <span style="font-size:10px;color:var(--c-gap);background:var(--c-gap-bg);padding:0 6px;border-radius:3px;margin-left:4px">共享</span>' : ''}
     </div>
   `).join('') || '<div class="sidebar-item" style="color:var(--text-tertiary)">暂无研究主题</div>';
 
@@ -66,10 +67,15 @@ function renderCenter(topic) {
     detailHtml = renderCardDetail(tid);
   }
 
+  const isOwner = topic.userId === (currentUser?.id);
+
   center.innerHTML = `
     <div class="question-block">
-      <div class="question-title">${topic.name}</div>
-      <div class="question-tags" id="questionTags">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div class="question-title" style="margin-bottom:0">${topic.name}</div>
+        ${isOwner ? '<button class="btn" onclick="showInviteModal()" title="邀请协作" style="height:28px;font-size:12px;flex-shrink:0">+ 邀请</button>' : ''}
+      </div>
+      <div class="question-tags" id="questionTags" style="margin-top:12px">
         ${tags.map((t, i) => `<span class="tag${i===0?' highlight':''}">${t}</span>`).join('')}
       </div>
     </div>
@@ -396,6 +402,79 @@ function showTermModal(category, onSave) {
     }
   });
   input.focus();
+}
+
+function showInviteModal() {
+  const topic = getSelectedTopic();
+  if (!topic || topic.userId !== currentUser?.id) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ai-modal-overlay';
+
+  async function render(members) {
+    const memberRows = (members || []).map(m => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;font-size:13px;border-bottom:1px solid var(--border)">
+        <span>${escapeHtml(m.email || m.user_id)} <span style="color:var(--text-tertiary);font-size:11px">(${m.role})</span></span>
+        <button class="btn" style="height:24px;font-size:11px;padding:0 8px" data-remove="${m.user_id}">移除</button>
+      </div>`).join('') || '<div style="color:var(--text-tertiary);font-size:12px;padding:8px">暂无协作者</div>';
+
+    overlay.innerHTML = `
+      <div class="ai-modal">
+        <div class="ai-modal-header">邀请协作</div>
+        <div class="ai-modal-body">
+          <label>当前协作者</label>
+          <div id="inviteMemberList" style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">${memberRows}</div>
+          <label style="margin-top:12px">通过邮箱邀请</label>
+          <div style="display:flex;gap:6px">
+            <input type="email" id="inviteEmail" placeholder="输入对方注册邮箱..." style="flex:1">
+            <select id="inviteRole" style="width:100px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 6px;font-size:13px">
+              <option value="viewer">只读</option>
+              <option value="editor">编辑</option>
+            </select>
+          </div>
+          <div id="inviteError" style="font-size:12px;color:#c0392b;margin-top:4px"></div>
+        </div>
+        <div class="ai-modal-actions">
+          <button class="btn btn-cancel" id="inviteClose">关闭</button>
+          <button class="btn btn-primary" id="inviteSend">发送邀请</button>
+        </div>
+      </div>`;
+
+    // Bind remove buttons
+    overlay.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        await db.removeTopicMember(topic.id, this.dataset.remove);
+        const updated = await db.getTopicMembers(topic.id);
+        render(updated);
+      });
+    });
+
+    // Bind close
+    overlay.querySelector('#inviteClose').addEventListener('click', () => overlay.remove());
+
+    // Bind send
+    overlay.querySelector('#inviteSend').addEventListener('click', async () => {
+      const email = overlay.querySelector('#inviteEmail').value.trim();
+      const role = overlay.querySelector('#inviteRole').value;
+      const errEl = overlay.querySelector('#inviteError');
+      if (!email) { errEl.textContent = '请输入邮箱'; return; }
+      const user = await db.lookupUserByEmail(email);
+      if (!user) { errEl.textContent = '未找到该用户，请确认对方已注册'; return; }
+      if (user.user_id === currentUser.id) { errEl.textContent = '不能邀请自己'; return; }
+      try {
+        await db.addTopicMember(topic.id, user.user_id, role, currentUser.id);
+        errEl.textContent = '';
+        overlay.querySelector('#inviteEmail').value = '';
+        const updated = await db.getTopicMembers(topic.id);
+        render(updated);
+      } catch (e) {
+        errEl.textContent = e.message || '邀请失败，可能对方已是协作者';
+      }
+    });
+  }
+
+  document.body.appendChild(overlay);
+  db.getTopicMembers(topic.id).then(members => render(members));
 }
 
 function showTermSearchModal(termText) {
