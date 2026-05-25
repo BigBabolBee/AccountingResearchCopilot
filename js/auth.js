@@ -61,26 +61,39 @@ async function handleSignUp() {
   const role = document.getElementById('authRole').value;
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
   if (password.length < 6) { showAuthError('密码至少 6 位'); return; }
+  if (!window._supabaseClient) { showAuthError('服务未就绪，请刷新页面后重试'); return; }
   setAuthLoading(true);
-  const { data, error } = await window._supabaseClient.auth.signUp({ email, password });
-  if (error) { setAuthLoading(false); showAuthError(error.message); return; }
-  // Insert profile
-  if (data.user) {
-    await window._supabaseClient.from('profiles').insert({ id: crypto.randomUUID(), user_id: data.user.id, email, role });
+  try {
+    const { data, error } = await window._supabaseClient.auth.signUp({ email, password });
+    if (error) { showAuthError(error.message); return; }
+    if (data.user) {
+      await window._supabaseClient.from('profiles').insert({ id: crypto.randomUUID(), user_id: data.user.id, email, role });
+    }
+    showAuthError('');
+    showAuthMessage('注册成功！请检查邮箱确认链接。');
+  } catch (e) {
+    showAuthError(e.message || '注册失败，请稍后重试');
+    console.error('signUp error:', e);
+  } finally {
+    setAuthLoading(false);
   }
-  setAuthLoading(false);
-  showAuthError('');
-  showAuthMessage('注册成功！请检查邮箱确认链接。');
 }
 
 async function handleSignIn() {
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value.trim();
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
+  if (!window._supabaseClient) { showAuthError('服务未就绪，请刷新页面后重试'); return; }
   setAuthLoading(true);
-  const { error } = await window._supabaseClient.auth.signInWithPassword({ email, password });
-  setAuthLoading(false);
-  if (error) { showAuthError(error.message); return; }
+  try {
+    const { error } = await window._supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError(error.message); return; }
+  } catch (e) {
+    showAuthError(e.message || '登录失败，请稍后重试');
+    console.error('signIn error:', e);
+  } finally {
+    setAuthLoading(false);
+  }
 }
 
 async function handleSignOut() {
