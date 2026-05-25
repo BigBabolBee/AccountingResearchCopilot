@@ -33,6 +33,12 @@ function switchAuthMode(mode) {
   // Role selector
   var roleGroup = document.getElementById('authRoleGroup');
   if (roleGroup) roleGroup.style.display = isSignup ? 'block' : 'none';
+  // Confirm password
+  var confirmWrap = document.getElementById('authPasswordConfirmWrap');
+  if (confirmWrap) confirmWrap.style.display = isSignup ? 'block' : 'none';
+  // Password toggle
+  var pwdToggle = document.getElementById('pwdToggle');
+  if (pwdToggle) pwdToggle.style.display = isSignup ? 'block' : 'none';
   // Switch text
   var swEl = document.getElementById('authSwitchText');
   if (swEl) {
@@ -45,6 +51,16 @@ function switchAuthMode(mode) {
   var msgEl = document.getElementById('authMessage');
   if (errEl) errEl.textContent = '';
   if (msgEl) msgEl.textContent = '';
+}
+function togglePassword() {
+  var pw = document.getElementById('authPassword');
+  var pc = document.getElementById('authPasswordConfirm');
+  var t = document.getElementById('pwdToggle');
+  if (!pw) return;
+  var show = pw.type === 'password';
+  pw.type = show ? 'text' : 'password';
+  if (pc) pc.type = show ? 'text' : 'password';
+  if (t) t.innerHTML = show ? '&#128064;' : '&#128065;';
 }
 // Init: bind the submit button after DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -71,14 +87,20 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="auth-error" id="authError"></div>
     <div class="auth-message" id="authMessage"></div>
     <input type="email" id="authEmail" placeholder="邮箱地址" autocomplete="email">
-    <input type="password" id="authPassword" placeholder="密码" autocomplete="current-password">
+    <div class="auth-input-wrap">
+      <input type="password" id="authPassword" placeholder="密码" autocomplete="current-password">
+      <span class="pwd-toggle" id="pwdToggle" onclick="togglePassword()" style="display:none">&#128065;</span>
+    </div>
+    <div class="auth-input-wrap" id="authPasswordConfirmWrap" style="display:none">
+      <input type="password" id="authPasswordConfirm" placeholder="确认密码" autocomplete="new-password">
+    </div>
     <div id="authRoleGroup" style="display:none;margin-bottom:12px">
       <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">用户类型</label>
       <select id="authRole" style="width:100%;height:40px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-size:14px;font-family:var(--font);outline:none;background:var(--surface);box-sizing:border-box">
-        <option value="researcher">研究者 (Researcher) — 普通在读科研人员</option>
-        <option value="group_leader">小组长 (Group Leader) — 日常任务带队协调</option>
-        <option value="co_investigator">小老板 (Co-Investigator) — 协助统筹、分管方向</option>
-        <option value="principal_investigator">大老板 (Principal Investigator) — 基金、课题最高负责人</option>
+        <option value="researcher">Researcher</option>
+        <option value="group_leader">Group Leader</option>
+        <option value="co_investigator">Co-Investigator</option>
+        <option value="principal_investigator">Principal Investigator</option>
       </select>
     </div>
     <button class="auth-submit" id="authSubmitBtn">登录</button>

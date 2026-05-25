@@ -1052,6 +1052,25 @@ main {
 }
 .auth-submit:hover { background: var(--accent-hover); }
 .auth-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-input-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+.auth-input-wrap input {
+  margin-bottom: 0;
+}
+.pwd-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 18px;
+  user-select: none;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.pwd-toggle:hover { opacity: 1; }
 .auth-switch {
   text-align: center;
   font-size: 13px;

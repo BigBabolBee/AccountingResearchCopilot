@@ -61,6 +61,8 @@ async function handleSignUp() {
   const role = document.getElementById('authRole').value;
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
   if (password.length < 6) { showAuthError('密码至少 6 位'); return; }
+  const passwordConfirm = document.getElementById('authPasswordConfirm').value;
+  if (password !== passwordConfirm) { showAuthError('两次输入的密码不一致'); return; }
   if (!window._supabaseClient) { showAuthError('服务未就绪，请刷新页面后重试'); return; }
   setAuthLoading(true);
   try {
