@@ -45,11 +45,11 @@ function switchAuthMode(mode) {
   if (errEl) errEl.textContent = '';
   if (msgEl) msgEl.textContent = '';
 }
-// Init: bind the submit button for initial "signin" mode
-(function() {
+// Init: bind the submit button after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
   var btn = document.getElementById('authSubmitBtn');
   if (btn) btn.onclick = function() { if (window.handleSignIn) window.handleSignIn(); };
-})();
+});
 </script>
 
 <!-- ═══════════════════════ AUTH CONTAINER ═══════════════════════ -->
