@@ -10,7 +10,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   if (session?.user) {
     currentUser = session.user;
     if (!appInitialized) {
-      initData();
+      await initData();
       initUI();
       appInitialized = true;
     }

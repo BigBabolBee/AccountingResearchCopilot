@@ -1,7 +1,6 @@
 // ═══════════════════════ ENTITY DATA MODEL ═══════════════════════
-const STORAGE_KEY = 'accounting_research_copilot_v3';
 
-// ── Entity arrays ──
+// ── Entity arrays (in-memory cache, loaded from Supabase on init) ──
 let topics = [];
 let papers = [];
 let theories = [];
@@ -9,10 +8,6 @@ let variables = [];
 let methods = [];
 let structures = [];
 let termExpansions = [];
-
-const nextIds = { topics: 1, papers: 1, theories: 1, variables: 1, methods: 1, structures: 1, termExpansions: 1 };
-
-function nextIdFor(entity) { return nextIds[entity]++; }
 
 // ── Entity getters ──
 function getPapers(topicId)       { return papers.filter(p => p.topicId === topicId); }
@@ -22,76 +17,45 @@ function getMethods(topicId)      { return methods.filter(m => m.topicId === top
 function getStructures(topicId)   { return structures.filter(s => s.topicId === topicId).sort((a,b) => a.sortOrder - b.sortOrder); }
 function getTermExpansions(topicId) { return termExpansions.filter(t => t.topicId === topicId); }
 
-// ── Default seed data ──
-function seedDefaultData() {
-  const now = Date.now();
-  const tid = nextIdFor('topics');
-  topics.push({ id: tid, name: "ESG 如何影响成本粘性", createdAt: now, modifiedAt: now });
+// ── Default seed data (first-time user only) ──
+async function seedDefaultData() {
+  const tid = await db.createTopic("ESG 如何影响成本粘性");
 
   const paperData = [
-    { title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021. We find that better ESG performance significantly reduces cost stickiness, and this effect is more pronounced in firms with higher agency costs and weaker external monitoring.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory", topic: "esg" },
-    { title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior. Using a difference-in-differences design around mandatory ESG disclosure regulation, we document that enhanced transparency reduces managerial empire-building incentives, thereby lowering cost stickiness.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory", topic: "esg" },
-    { title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness, demonstrating that SG&A costs increase more when activity rises than they decrease when activity falls by an equivalent amount.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory", topic: "formation" },
-    { title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures. We find that digital adoption increases cost flexibility and reduces stickiness, especially for labor costs.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View", topic: "digital" },
-    { title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms. Results show that larger boards and higher board independence are associated with reduced cost stickiness.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory", topic: "governance" },
-    { title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior. Green innovation creates specialized resources that increase cost stickiness in the short run but reduce it in the long run.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory", topic: "esg" }
+    { title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021. We find that better ESG performance significantly reduces cost stickiness, and this effect is more pronounced in firms with higher agency costs and weaker external monitoring.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory" },
+    { title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior. Using a difference-in-differences design around mandatory ESG disclosure regulation, we document that enhanced transparency reduces managerial empire-building incentives, thereby lowering cost stickiness.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory" },
+    { title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness, demonstrating that SG&A costs increase more when activity rises than they decrease when activity falls by an equivalent amount.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory" },
+    { title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures. We find that digital adoption increases cost flexibility and reduces stickiness, especially for labor costs.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View" },
+    { title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms. Results show that larger boards and higher board independence are associated with reduced cost stickiness.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory" },
+    { title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior. Green innovation creates specialized resources that increase cost stickiness in the short run but reduce it in the long run.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory" }
   ];
-  paperData.forEach(p => papers.push({ id: nextIdFor('papers'), topicId: tid, ...p }));
+  for (const p of paperData) { await db.createPaper(tid, p); }
 
-  ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"]
-    .forEach(t => theories.push({ id: nextIdFor('theories'), topicId: tid, name: t }));
+  for (const name of ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"]) {
+    await db.createTheory(tid, name);
+  }
 
-  [
-    { name: "ESG Score", role: "自变量" }, { name: "Cost Stickiness", role: "因变量" },
-    { name: "Firm Size", role: "控制变量" }, { name: "Leverage", role: "控制变量" },
-    { name: "ROA", role: "控制变量" }, { name: "Board Size", role: "调节变量" }
-  ].forEach(v => variables.push({ id: nextIdFor('variables'), topicId: tid, ...v }));
+  for (const { name, role } of [{ name: "ESG Score", role: "自变量" }, { name: "Cost Stickiness", role: "因变量" }, { name: "Firm Size", role: "控制变量" }, { name: "Leverage", role: "控制变量" }, { name: "ROA", role: "控制变量" }, { name: "Board Size", role: "调节变量" }]) {
+    await db.createVariable(tid, name, role);
+  }
 
-  ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"]
-    .forEach(m => methods.push({ id: nextIdFor('methods'), topicId: tid, name: m }));
+  for (const name of ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"]) {
+    await db.createMethod(tid, name);
+  }
 
   ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
-    .forEach((s, i) => structures.push({ id: nextIdFor('structures'), topicId: tid, name: s, sortOrder: i }));
-
-  // termExpansions 初始为空，由用户通过 AI 拓展或手动新建来填充
-}
-
-// ── Persistence ──
-function getUserStorageKey() {
-  const uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : 'anonymous';
-  return 'accounting_research_copilot_v3_' + uid;
-}
-
-function saveAll() {
-  localStorage.setItem(getUserStorageKey(), JSON.stringify({
-    nextIds, topics, papers, theories, variables, methods, structures, termExpansions
-  }));
-}
-
-function loadAll() {
-  const raw = localStorage.getItem(getUserStorageKey());
-  if (!raw) return false;
-  const d = JSON.parse(raw);
-  Object.assign(nextIds, d.nextIds || {});
-  topics = d.topics || [];
-  papers = d.papers || [];
-  theories = d.theories || [];
-  variables = d.variables || [];
-  methods = d.methods || [];
-  structures = d.structures || [];
-  termExpansions = d.termExpansions || [];
-  return topics.length > 0;
+    .forEach((s, i) => db.createStructure(tid, s, i));
 }
 
 // Init data — called after auth is confirmed
-function initData() {
-  if (!loadAll()) {
-    seedDefaultData();
-    saveAll();
+async function initData() {
+  await db.loadAll();
+  if (topics.length === 0) {
+    await seedDefaultData();
   }
 }
 
-// ── AI Config ──
+// ── AI Config (per-browser, still localStorage) ──
 function loadAiConfig() {
   const raw = localStorage.getItem('ai_config');
   if (raw) return JSON.parse(raw);
@@ -100,6 +64,7 @@ function loadAiConfig() {
 function saveAiConfig(config) {
   localStorage.setItem('ai_config', JSON.stringify(config));
 }
+
 // ── AI API ──
 async function translateTerm(term, config) {
   const systemPrompt = `你是一名学术翻译助手。用户输入一个学术术语，你需要将其规范化为"中文（English）"格式。

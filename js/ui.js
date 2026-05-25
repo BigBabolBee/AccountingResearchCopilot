@@ -33,7 +33,7 @@ function selectTopic(id) {
   const topic = getSelectedTopic();
   if (!topic) return;
   topic.modifiedAt = Date.now();
-  saveAll();
+  db.updateTopic(id, {});
   document.getElementById('searchInput').value = topic.name;
   rightPanelMode = 'list';
   rightPanelTerm = null;
@@ -156,11 +156,11 @@ function renderTermList(panel, topic, allTerms) {
 
   // Bind + root term
   panel.querySelector('#btnAddRootTerm').addEventListener('click', function() {
-    showTermModal('term', function(term) {
+    showTermModal('term', async function(term) {
       const t = getSelectedTopic();
-      termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term, category: 'term' });
+      await db.createTermExpansion(t.id, { term, category: 'term' });
       t.modifiedAt = Date.now();
-      saveAll();
+      db.updateTopic(t.id, {});
       renderRightPanel(t);
     });
   });
@@ -220,14 +220,14 @@ function renderTermDetail(panel, topic, allTerms) {
 
   // Bind term delete + search click
   panel.querySelectorAll('.term-tags').forEach(section => {
-    section.addEventListener('click', function(e) {
+    section.addEventListener('click', async function(e) {
       const del = e.target.closest('.term-del');
       if (del) {
-        const id = parseInt(del.dataset.id);
-        termExpansions = termExpansions.filter(x => x.id !== id);
+        const id = del.dataset.id;
+        await db.deleteTermExpansion(id);
         const t = getSelectedTopic();
         t.modifiedAt = Date.now();
-        saveAll();
+        db.updateTopic(t.id, {});
         renderRightPanel(t);
         return;
       }
@@ -243,11 +243,11 @@ function renderTermDetail(panel, topic, allTerms) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       const cat = this.dataset.cat;
-      showTermModal(cat, function(term) {
+      showTermModal(cat, async function(term) {
         const t = getSelectedTopic();
-        termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term, category: cat, parentTerm: curTerm });
+        await db.createTermExpansion(t.id, { term, category: cat, parentTerm: curTerm });
         t.modifiedAt = Date.now();
-        saveAll();
+        db.updateTopic(t.id, {});
         renderRightPanel(t);
       });
     });
@@ -509,26 +509,19 @@ function showTermSearchModal(termText) {
     } else if (step === 3) {
       overlay.querySelector('#tsBtnClose').onclick = () => overlay.remove();
       overlay.querySelector('#tsBtnBack').onclick = () => { step = 1; render(); };
-      overlay.querySelector('#tsBtnSave').onclick = () => {
+      overlay.querySelector('#tsBtnSave').onclick = async () => {
         const checks = overlay.querySelectorAll('#tsResultsList input:checked');
         if (checks.length === 0) { overlay.remove(); return; }
         const t = getSelectedTopic();
-        checks.forEach(cb => {
+        for (const cb of checks) {
           const p = allPapers[parseInt(cb.dataset.idx)];
-          papers.push({
-            id: nextIdFor('papers'),
-            topicId: t.id,
-            title: p.title,
-            authors: p.authors || '',
-            journal: p.journal || '',
-            year: p.year || '',
-            abstract: '',
-            tags: [termText],
-            theory: ''
+          await db.createPaper(t.id, {
+            title: p.title, authors: p.authors || '', journal: p.journal || '',
+            year: p.year || '', abstract: '', tags: [termText], theory: ''
           });
-        });
+        }
         t.modifiedAt = Date.now();
-        saveAll();
+        db.updateTopic(t.id, {});
         renderCenter(t);
         overlay.remove();
       };
@@ -767,18 +760,18 @@ function showAiExpandModal(prefillTerm) {
       overlay.querySelector('#aiInvert').onclick = () => {
         overlay.querySelectorAll('#aiResultsList input[type="checkbox"]').forEach(cb => { cb.checked = !cb.checked; });
       };
-      overlay.querySelector('#aiBtnSave').onclick = () => {
+      overlay.querySelector('#aiBtnSave').onclick = async () => {
         const checks = overlay.querySelectorAll('#aiResultsList input:checked');
         if (checks.length === 0) { overlay.remove(); return; }
         const t = getSelectedTopic();
         const items = overlay._flatItems || [];
         const parentTerm = aiResults.core_term_cn || termInput;
-        checks.forEach(cb => {
+        for (const cb of checks) {
           const item = items[parseInt(cb.dataset.fi)];
-          if (item) termExpansions.push({ id: nextIdFor('termExpansions'), topicId: t.id, term: item.text, category: item.category || 'term', parentTerm });
-        });
+          if (item) await db.createTermExpansion(t.id, { term: item.text, category: item.category || 'term', parentTerm });
+        }
         t.modifiedAt = Date.now();
-        saveAll();
+        db.updateTopic(t.id, {});
         rightPanelMode = 'detail';
         rightPanelTerm = parentTerm;
         renderRightPanel(t);
@@ -817,19 +810,17 @@ function rebindOutlineEvents() {
 // ═══════════════════════ HEADER BUTTONS ═══════════════════════
 function handleSearch() { alert('实现中'); }
 
-function handleNewResearch() {
+async function handleNewResearch() {
   const q = document.getElementById('searchInput').value.trim();
   if (!q) { alert('请输入研究主题'); return; }
 
   const existing = topics.find(t => t.name === q);
   if (existing) { selectTopic(existing.id); return; }
 
-  const tid = nextIdFor('topics');
-  const now = Date.now();
-  topics.push({ id: tid, name: q, createdAt: now, modifiedAt: now });
-  ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
-    .forEach((s, i) => structures.push({ id: nextIdFor('structures'), topicId: tid, name: s, sortOrder: i }));
-  saveAll();
+  const tid = await db.createTopic(q);
+  for (const [i, s] of ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"].entries()) {
+    await db.createStructure(tid, s, i);
+  }
   activeCard = 'papers';
   selectTopic(tid);
 }
