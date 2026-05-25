@@ -9,8 +9,8 @@ const db = (() => {
     const tables = ['topics', 'papers', 'theories', 'variables', 'methods', 'structures', 'term_expansions'];
     for (const table of tables) {
       const { data, error } = await supabase.from(table).select('*');
-      if (error) { console.error('loadAll ' + table, error); continue; }
       window['_' + table] = data || [];
+      if (error) { console.error('loadAll ' + table, error); continue; }
     }
     topics = (_topics || []).map(rowToTopic);
     papers = (_papers || []).map(rowToPaper);
