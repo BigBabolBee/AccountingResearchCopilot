@@ -71,13 +71,13 @@ async function handleSignUp() {
       options: { emailRedirectTo: 'https://bigbabolbee.github.io/AccountingResearchCopilot' }
     });
     if (error) { showAuthError(error.message); return; }
-    // Supabase returns success even for existing emails (to prevent enumeration);
-    // a real new user has at least one identity
-    if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+    // Supabase returns success even for existing emails (to prevent enumeration).
+    // A truly new registration: data.user is not null AND has at least one identity.
+    if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
       showAuthError('该邮箱已注册，请直接登录');
       return;
     }
-    if (data.user) {
+    {
       await window._supabaseClient.from('profiles').insert({ id: crypto.randomUUID(), user_id: data.user.id, email, role });
     }
     showAuthError('');
