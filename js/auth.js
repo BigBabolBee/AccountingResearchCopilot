@@ -64,7 +64,10 @@ async function handleSignUp() {
   if (!window._supabaseClient) { showAuthError('服务未就绪，请刷新页面后重试'); return; }
   setAuthLoading(true);
   try {
-    const { data, error } = await window._supabaseClient.auth.signUp({ email, password });
+    const { data, error } = await window._supabaseClient.auth.signUp({
+      email, password,
+      options: { emailRedirectTo: 'https://bigbabolbee.github.io/AccountingResearchCopilot' }
+    });
     if (error) { showAuthError(error.message); return; }
     if (data.user) {
       await window._supabaseClient.from('profiles').insert({ id: crypto.randomUUID(), user_id: data.user.id, email, role });
@@ -110,7 +113,18 @@ function setAuthLoading(loading) {
 
 function showAuthError(msg) {
   const el = document.getElementById('authError');
-  if (el) el.textContent = msg;
+  if (el) el.textContent = translateAuthError(msg);
+}
+
+function translateAuthError(msg) {
+  const map = {
+    'Invalid login credentials': '邮箱或密码错误',
+    'User already registered': '该邮箱已注册，请直接登录',
+    'Email not confirmed': '邮箱未验证，请先点击邮件中的确认链接',
+    'Unable to validate email address: invalid format': '邮箱格式不正确',
+    'Password should be at least 6 characters': '密码至少需要 6 位'
+  };
+  return map[msg] || msg;
 }
 
 function showAuthMessage(msg) {
