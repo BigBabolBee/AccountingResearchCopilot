@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://gzchpndcueapysozwqjq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_tO4yZczJ0wWvQb3_r4IQRw_KjenVJ6S';
-const supabase = (window.supabase && window.supabase.createClient)
+window._supabaseClient = (window.supabase && window.supabase.createClient)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
@@ -8,8 +8,8 @@ let currentUser = null;   // { id, email, role }
 let appInitialized = false;
 
 // ── Auth state listener ──
-if (supabase) {
-  supabase.auth.onAuthStateChange(async (event, session) => {
+if (window._supabaseClient) {
+  window._supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
       const profile = await db_getProfile(session.user.id);
       currentUser = {
@@ -32,8 +32,8 @@ if (supabase) {
 
 // ── Profile lookup ──
 async function db_getProfile(userId) {
-  if (!supabase) return null;
-  const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+  if (!window._supabaseClient) return null;
+  const { data, error } = await window._supabaseClient.from('profiles').select('*').eq('user_id', userId).maybeSingle();
   return error ? null : data;
 }
 
@@ -62,11 +62,11 @@ async function handleSignUp() {
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
   if (password.length < 6) { showAuthError('密码至少 6 位'); return; }
   setAuthLoading(true);
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await window._supabaseClient.auth.signUp({ email, password });
   if (error) { setAuthLoading(false); showAuthError(error.message); return; }
   // Insert profile
   if (data.user) {
-    await supabase.from('profiles').insert({ id: crypto.randomUUID(), user_id: data.user.id, email, role });
+    await window._supabaseClient.from('profiles').insert({ id: crypto.randomUUID(), user_id: data.user.id, email, role });
   }
   setAuthLoading(false);
   showAuthError('');
@@ -78,13 +78,13 @@ async function handleSignIn() {
   const password = document.getElementById('authPassword').value.trim();
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
   setAuthLoading(true);
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await window._supabaseClient.auth.signInWithPassword({ email, password });
   setAuthLoading(false);
   if (error) { showAuthError(error.message); return; }
 }
 
 async function handleSignOut() {
-  await supabase.auth.signOut();
+  await window._supabaseClient.auth.signOut();
 }
 
 function setAuthLoading(loading) {

@@ -1,5 +1,6 @@
 // ═══════════════════════ SUPABASE DATA LAYER ═══════════════════════
 const db = (() => {
+  const supabase = window._supabaseClient;
   function uid() { return currentUser?.id; }
 
   async function loadAll() {
