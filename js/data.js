@@ -57,14 +57,19 @@ function seedDefaultData() {
 }
 
 // ── Persistence ──
+function getUserStorageKey() {
+  const uid = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : 'anonymous';
+  return 'accounting_research_copilot_v3_' + uid;
+}
+
 function saveAll() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  localStorage.setItem(getUserStorageKey(), JSON.stringify({
     nextIds, topics, papers, theories, variables, methods, structures, termExpansions
   }));
 }
 
 function loadAll() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(getUserStorageKey());
   if (!raw) return false;
   const d = JSON.parse(raw);
   Object.assign(nextIds, d.nextIds || {});
@@ -78,10 +83,12 @@ function loadAll() {
   return topics.length > 0;
 }
 
-// Init data
-if (!loadAll()) {
-  seedDefaultData();
-  saveAll();
+// Init data — called after auth is confirmed
+function initData() {
+  if (!loadAll()) {
+    seedDefaultData();
+    saveAll();
+  }
 }
 
 // ── AI Config ──

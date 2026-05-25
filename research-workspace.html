@@ -8,6 +8,35 @@
 </head>
 <body>
 
+<!-- ═══════════════════════ AUTH CONTAINER ═══════════════════════ -->
+<div id="authContainer" class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon">Σ</div>
+      <div>
+        <div class="auth-logo-title">ResearchCopilot</div>
+        <div class="auth-logo-sub">会计学研究助手</div>
+      </div>
+    </div>
+    <div class="auth-tabs">
+      <span class="auth-tab active" id="authTabSignIn" onclick="switchAuthMode('signin')">登录</span>
+      <span class="auth-tab" id="authTabSignUp" onclick="switchAuthMode('signup')">注册</span>
+    </div>
+    <div class="auth-title" id="authTitle">登录</div>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-message" id="authMessage"></div>
+    <input type="email" id="authEmail" placeholder="邮箱地址" autocomplete="email">
+    <input type="password" id="authPassword" placeholder="密码" autocomplete="current-password">
+    <button class="auth-submit" id="authSubmitBtn" onclick="handleSignIn()">登录</button>
+    <div class="auth-switch" id="authSwitchText">
+      没有账号？<span class="auth-switch-link" onclick="switchAuthMode('signup')">去注册</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ APP CONTENT ═══════════════════════ -->
+<div id="appContent" style="display:none;flex-direction:column;height:100vh">
+
 <!-- ═══════════════════════ HEADER ═══════════════════════ -->
 <header>
   <div class="header-logo">
@@ -24,6 +53,8 @@
   <div class="header-actions">
     <button class="btn btn-primary" onclick="handleNewResearch()">+ 新建研究</button>
     <button class="btn" onclick="handleSearch()">&#128269; 搜索</button>
+    <span id="userEmail" style="font-size:12px;color:var(--text-tertiary);margin-left:8px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button class="btn" onclick="handleSignOut()" title="退出登录" style="padding:0 8px;font-size:16px">&#10149;</button>
   </div>
 </header>
 
@@ -48,6 +79,10 @@
   <aside class="right-panel" id="rightPanel"></aside>
 </main>
 
+</div><!-- /appContent -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
 <script src="js/data.js"></script>
 <script src="js/ui.js"></script>
 </body>

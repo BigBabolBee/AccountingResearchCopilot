@@ -849,6 +849,8 @@ document.getElementById('searchInput').addEventListener('keydown', function(e) {
 });
 
 // ═══════════════════════ INIT ═══════════════════════
-if (topics.length > 0) selectedTopicId = topics[0].id;
-renderSidebar();
-renderCenter(getSelectedTopic());
+function initUI() {
+  if (topics.length > 0) selectedTopicId = topics[0].id;
+  renderSidebar();
+  renderCenter(getSelectedTopic());
+}
