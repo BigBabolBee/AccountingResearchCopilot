@@ -96,12 +96,17 @@ async function handleSignIn() {
   if (!email || !password) { showAuthError('请填写邮箱和密码'); return; }
   if (!window._supabaseClient) { showAuthError('服务未就绪，请刷新页面后重试'); return; }
   setAuthLoading(true);
+  console.log('signIn: starting request for', email);
   try {
-    const { error } = await window._supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) { showAuthError(error.message); return; }
+    const result = await Promise.race([
+      window._supabaseClient.auth.signInWithPassword({ email, password }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('请求超时，请检查网络连接')), 15000))
+    ]);
+    console.log('signIn: response received', result.error ? 'error=' + result.error.message : 'success');
+    if (result.error) { showAuthError(result.error.message); return; }
   } catch (e) {
+    console.error('signIn exception:', e);
     showAuthError(e.message || '登录失败，请稍后重试');
-    console.error('signIn error:', e);
   } finally {
     setAuthLoading(false);
   }
