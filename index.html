@@ -36,9 +36,10 @@ function switchAuthMode(mode) {
   // Confirm password
   var confirmWrap = document.getElementById('authPasswordConfirmWrap');
   if (confirmWrap) confirmWrap.style.display = isSignup ? 'block' : 'none';
-  // Password toggle
-  var pwdToggle = document.getElementById('pwdToggle');
-  if (pwdToggle) pwdToggle.style.display = isSignup ? 'block' : 'none';
+  // Password toggle icons
+  document.querySelectorAll('.pwd-toggle').forEach(function(icon) {
+    icon.style.display = isSignup ? 'block' : 'none';
+  });
   // Switch text
   var swEl = document.getElementById('authSwitchText');
   if (swEl) {
@@ -52,15 +53,11 @@ function switchAuthMode(mode) {
   if (errEl) errEl.textContent = '';
   if (msgEl) msgEl.textContent = '';
 }
-function togglePassword() {
+function setPwdVisible(show) {
   var pw = document.getElementById('authPassword');
   var pc = document.getElementById('authPasswordConfirm');
-  var t = document.getElementById('pwdToggle');
-  if (!pw) return;
-  var show = pw.type === 'password';
-  pw.type = show ? 'text' : 'password';
+  if (pw) pw.type = show ? 'text' : 'password';
   if (pc) pc.type = show ? 'text' : 'password';
-  if (t) t.innerHTML = show ? '&#128064;' : '&#128065;';
 }
 // Init: bind the submit button after DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -89,10 +86,13 @@ document.addEventListener('DOMContentLoaded', function() {
     <input type="email" id="authEmail" placeholder="邮箱地址" autocomplete="email">
     <div class="auth-input-wrap">
       <input type="password" id="authPassword" placeholder="密码" autocomplete="current-password">
-      <span class="pwd-toggle" id="pwdToggle" onclick="togglePassword()" style="display:none">&#128065;</span>
+      <span class="pwd-toggle" id="pwdToggle" style="display:none"
+        onmouseenter="setPwdVisible(true)" onmouseleave="setPwdVisible(false)">&#128065;</span>
     </div>
     <div class="auth-input-wrap" id="authPasswordConfirmWrap" style="display:none">
       <input type="password" id="authPasswordConfirm" placeholder="确认密码" autocomplete="new-password">
+      <span class="pwd-toggle" style="display:none"
+        onmouseenter="setPwdVisible(true)" onmouseleave="setPwdVisible(false)">&#128065;</span>
     </div>
     <div id="authRoleGroup" style="display:none;margin-bottom:12px">
       <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px">用户类型</label>
