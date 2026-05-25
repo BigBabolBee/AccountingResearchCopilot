@@ -8,6 +8,50 @@
 </head>
 <body>
 
+<!-- ═══════════════════════ INLINE AUTH HELPERS (no dependency) ═══════════════════════ -->
+<script>
+window._authMode = 'signin';
+function switchAuthMode(mode) {
+  window._authMode = mode;
+  var isSignup = mode === 'signup';
+  // Tabs
+  document.querySelectorAll('.auth-tab').forEach(function(t) { t.classList.remove('active'); });
+  var tabEl = document.getElementById(isSignup ? 'authTabSignUp' : 'authTabSignIn');
+  if (tabEl) tabEl.classList.add('active');
+  // Title
+  var titleEl = document.getElementById('authTitle');
+  if (titleEl) titleEl.textContent = isSignup ? '创建账号' : '登录';
+  // Button
+  var btn = document.getElementById('authSubmitBtn');
+  if (btn) {
+    btn.textContent = isSignup ? '注册' : '登录';
+    btn.onclick = isSignup
+      ? function() { if (window.handleSignUp) window.handleSignUp(); }
+      : function() { if (window.handleSignIn) window.handleSignIn(); };
+  }
+  // Role selector
+  var roleGroup = document.getElementById('authRoleGroup');
+  if (roleGroup) roleGroup.style.display = isSignup ? 'block' : 'none';
+  // Switch text
+  var swEl = document.getElementById('authSwitchText');
+  if (swEl) {
+    swEl.innerHTML = isSignup
+      ? '已有账号？<span class="auth-switch-link" onclick="switchAuthMode(\'signin\')">去登录</span>'
+      : '没有账号？<span class="auth-switch-link" onclick="switchAuthMode(\'signup\')">去注册</span>';
+  }
+  // Clear messages
+  var errEl = document.getElementById('authError');
+  var msgEl = document.getElementById('authMessage');
+  if (errEl) errEl.textContent = '';
+  if (msgEl) msgEl.textContent = '';
+}
+// Init: bind the submit button for initial "signin" mode
+(function() {
+  var btn = document.getElementById('authSubmitBtn');
+  if (btn) btn.onclick = function() { if (window.handleSignIn) window.handleSignIn(); };
+})();
+</script>
+
 <!-- ═══════════════════════ AUTH CONTAINER ═══════════════════════ -->
 <div id="authContainer" class="auth-container">
   <div class="auth-card">
@@ -36,7 +80,7 @@
         <option value="principal_investigator">大老板 (Principal Investigator) — 基金、课题最高负责人</option>
       </select>
     </div>
-    <button class="auth-submit" id="authSubmitBtn" onclick="handleSignIn()">登录</button>
+    <button class="auth-submit" id="authSubmitBtn">登录</button>
     <div class="auth-switch" id="authSwitchText">
       没有账号？<span class="auth-switch-link" onclick="switchAuthMode('signup')">去注册</span>
     </div>
