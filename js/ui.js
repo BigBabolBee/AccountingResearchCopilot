@@ -167,7 +167,7 @@ function renderTermList(panel, topic, allTerms) {
     });
   });
 
-  panel.querySelector('#btnAiExpand').addEventListener('click', showAiExpandModal);
+  panel.querySelector('#btnAiExpand').addEventListener('click', function() { showAiExpandModal(); });
 }
 
 function renderTermDetail(panel, topic, allTerms) {

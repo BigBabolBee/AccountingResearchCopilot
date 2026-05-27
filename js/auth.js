@@ -13,21 +13,17 @@ if (window._supabaseClient) {
     if (session?.user) {
       currentUser = { id: session.user.id, email: session.user.email, role: 'researcher' };
       showApp();
+      // Only init app on first SIGNED_IN, skip TOKEN_REFRESHED / SIGNED_IN on page load
+      if (appInitialized) return;
       // Defer heavy async work so it doesn't block the SDK's internal promise chain
       setTimeout(async () => {
+        if (appInitialized) return;
         try {
           const profile = await db_getProfile(session.user.id);
           if (profile?.role) currentUser.role = profile.role;
-          if (!appInitialized) {
-            await initData();
-            initUI();
-            appInitialized = true;
-          }
-          // Refresh UI with loaded data
-          if (typeof selectTopic === 'function') {
-            const firstTopic = topics[0];
-            if (firstTopic) selectTopic(firstTopic.id);
-          }
+          await initData();
+          initUI();
+          appInitialized = true;
           const emailEl = document.getElementById('userEmail');
           if (emailEl) emailEl.textContent = currentUser.email;
         } catch (e) {
@@ -36,6 +32,7 @@ if (window._supabaseClient) {
       }, 0);
     } else {
       currentUser = null;
+      appInitialized = false;
       showAuth();
     }
   });
