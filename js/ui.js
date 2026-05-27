@@ -67,14 +67,10 @@ function renderCenter(topic) {
     detailHtml = renderCardDetail(tid);
   }
 
-  const isOwner = topic.userId === (currentUser?.id);
-
   center.innerHTML = `
     <div class="question-block">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div class="question-title" style="margin-bottom:0">${topic.name}</div>
-        ${isOwner ? '<button class="btn" onclick="showInviteModal()" title="邀请协作" style="height:28px;font-size:12px;flex-shrink:0">+ 邀请</button>' : ''}
-      </div>
+      <div class="question-title">${topic.name}</div>
+      <div class="demo-badge">示例数据 · 可自由修改或删除</div>
       <div class="question-tags" id="questionTags" style="margin-top:12px">
         ${tags.map((t, i) => `<span class="tag${i===0?' highlight':''}">${t}</span>`).join('')}
       </div>
