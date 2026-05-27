@@ -654,6 +654,7 @@ function showAiExpandModal(prefillTerm) {
       actionsHtml = `
         <button class="btn btn-cancel" id="aiBtnCancel">取消</button>
         <button class="btn" id="aiBtnBack">上一步</button>
+        <button class="btn" id="aiBtnTest">测试连接</button>
         <button class="btn btn-primary" id="aiBtnStart">开始拓展</button>
       `;
     } else if (step === 3) {
@@ -814,6 +815,33 @@ function showAiExpandModal(prefillTerm) {
         if (!config.model) { alert('请输入模型名称'); return; }
         saveAiConfig(config);
         launchAiExpand();
+      };
+      overlay.querySelector('#aiBtnTest').onclick = async () => {
+        const btn = overlay.querySelector('#aiBtnTest');
+        const testKey = overlay.querySelector('#aiApiKey').value.trim();
+        const testUrl = overlay.querySelector('#aiBaseUrl').value.trim();
+        const testModel = overlay.querySelector('#aiModel').value.trim();
+        if (!testKey || !testUrl || !testModel) { alert('请先填写完整配置'); return; }
+        btn.disabled = true;
+        btn.textContent = '测试中...';
+        try {
+          const resp = await fetch(`${testUrl}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${testKey}` },
+            body: JSON.stringify({ model: testModel, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 5 })
+          });
+          if (!resp.ok) {
+            const text = await resp.text();
+            alert(`连接失败 (${resp.status})\n${text.slice(0, 200)}`);
+          } else {
+            alert('连接成功！');
+          }
+        } catch (e) {
+          alert('网络错误：' + e.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '测试连接';
+        }
       };
       [overlay.querySelector('#aiApiKey'), overlay.querySelector('#aiBaseUrl'), overlay.querySelector('#aiModel')].forEach(el => {
         el.addEventListener('keydown', function(e) {
