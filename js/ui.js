@@ -12,7 +12,7 @@ function renderSidebar() {
   const uid = currentUser?.id;
   topicList.innerHTML = byCreation.map(t => `
     <div class="sidebar-item${t.id === selectedTopicId ? ' active' : ''}" data-topic-id="${t.id}">
-      ${t.name}${t.userId !== uid ? ' <span style="font-size:10px;color:var(--c-gap);background:var(--c-gap-bg);padding:0 6px;border-radius:3px;margin-left:4px">共享</span>' : ''}
+      ${t.name}${t.name === "ESG 如何影响成本粘性" ? ' <span style="font-size:10px;color:var(--text-tertiary);margin-left:4px">(示例)</span>' : ''}
     </div>
   `).join('') || '<div class="sidebar-item" style="color:var(--text-tertiary)">暂无研究主题</div>';
 
@@ -70,7 +70,7 @@ function renderCenter(topic) {
   center.innerHTML = `
     <div class="question-block">
       <div class="question-title">${topic.name}</div>
-      <div class="demo-badge">示例数据 · 可自由修改或删除</div>
+      ${topic.name === "ESG 如何影响成本粘性" ? '<div class="demo-badge">示例数据 · 可自由修改或删除</div>' : ''}
       <div class="question-tags" id="questionTags" style="margin-top:12px">
         ${tags.map((t, i) => `<span class="tag${i===0?' highlight':''}">${t}</span>`).join('')}
       </div>
