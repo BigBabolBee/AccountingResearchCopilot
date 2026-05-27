@@ -7,22 +7,33 @@ window._supabaseClient = (window.supabase && window.supabase.createClient)
 let currentUser = null;   // { id, email, role }
 let appInitialized = false;
 
-// ── Auth state listener ──
+// ── Auth state listener (must not block signInWithPassword) ──
 if (window._supabaseClient) {
-  window._supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  window._supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
-      const profile = await db_getProfile(session.user.id);
-      currentUser = {
-        id: session.user.id,
-        email: session.user.email,
-        role: profile?.role || 'researcher'
-      };
-      if (!appInitialized) {
-        await initData();
-        initUI();
-        appInitialized = true;
-      }
+      currentUser = { id: session.user.id, email: session.user.email, role: 'researcher' };
       showApp();
+      // Defer heavy async work so it doesn't block the SDK's internal promise chain
+      setTimeout(async () => {
+        try {
+          const profile = await db_getProfile(session.user.id);
+          if (profile?.role) currentUser.role = profile.role;
+          if (!appInitialized) {
+            await initData();
+            initUI();
+            appInitialized = true;
+          }
+          // Refresh UI with loaded data
+          if (typeof selectTopic === 'function') {
+            const firstTopic = topics[0];
+            if (firstTopic) selectTopic(firstTopic.id);
+          }
+          const emailEl = document.getElementById('userEmail');
+          if (emailEl) emailEl.textContent = currentUser.email;
+        } catch (e) {
+          console.error('app init error:', e);
+        }
+      }, 0);
     } else {
       currentUser = null;
       showAuth();
