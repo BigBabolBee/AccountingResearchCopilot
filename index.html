@@ -19,9 +19,6 @@ function switchAuthMode(mode) {
   document.querySelectorAll('.auth-tab').forEach(function(t) { t.classList.remove('active'); });
   var tabEl = document.getElementById(isSignup ? 'authTabSignUp' : 'authTabSignIn');
   if (tabEl) tabEl.classList.add('active');
-  // Title
-  var titleEl = document.getElementById('authTitle');
-  if (titleEl) titleEl.textContent = isSignup ? '创建账号' : '登录';
   // Button
   var btn = document.getElementById('authSubmitBtn');
   if (btn) {
@@ -80,7 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <span class="auth-tab active" id="authTabSignIn" onclick="switchAuthMode('signin')">登录</span>
       <span class="auth-tab" id="authTabSignUp" onclick="switchAuthMode('signup')">注册</span>
     </div>
-    <div class="auth-title" id="authTitle">登录</div>
     <div class="auth-error" id="authError"></div>
     <div class="auth-message" id="authMessage"></div>
     <input type="email" id="authEmail" placeholder="邮箱地址" autocomplete="email">
