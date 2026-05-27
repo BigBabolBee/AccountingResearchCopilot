@@ -1060,7 +1060,7 @@ main {
 }
 .auth-input-wrap input {
   margin-bottom: 0;
-  padding-right: 36px;
+  padding-right: 12px;
 }
 .pwd-toggle {
   position: absolute;
