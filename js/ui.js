@@ -98,6 +98,13 @@ function renderCenter(topic) {
     renderCenter(getSelectedTopic());
   });
 
+  const addItemBtn = document.getElementById('addCardItem');
+  if (addItemBtn) {
+    addItemBtn.addEventListener('click', function() {
+      showCardItemModal(this.dataset.card);
+    });
+  }
+
   rebindOutlineEvents();
   renderRightPanel(topic);
 }
@@ -297,18 +304,123 @@ function renderPapers(papersList) {
   });
 }
 
+function showCardItemModal(cardType) {
+  const topic = getSelectedTopic();
+  if (!topic) return;
+  const tid = topic.id;
+
+  const titles = { papers: '添加文献', theories: '添加理论', variables: '添加变量', methods: '添加方法', structure: '添加结构' };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'term-modal-overlay';
+
+  let bodyHtml = '';
+  if (cardType === 'papers') {
+    bodyHtml = `
+      <input type="text" id="cardItemTitle" placeholder="论文标题" style="margin-bottom:10px">
+      <input type="text" id="cardItemAuthors" placeholder="作者" style="margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="text" id="cardItemJournal" placeholder="期刊名称" style="flex:2;margin-bottom:0">
+        <input type="number" id="cardItemYear" placeholder="年份" style="flex:1;margin-bottom:0">
+      </div>
+      <textarea id="cardItemAbstract" placeholder="摘要（可选）" style="width:100%;height:80px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;box-sizing:border-box"></textarea>
+    `;
+  } else if (cardType === 'variables') {
+    bodyHtml = `
+      <input type="text" id="cardItemName" placeholder="变量名称" style="margin-bottom:10px">
+      <select id="cardItemRole" style="width:100%;height:38px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 12px;font-size:13px;font-family:var(--font);outline:none;background:var(--surface);box-sizing:border-box">
+        <option value="自变量">自变量</option>
+        <option value="因变量">因变量</option>
+        <option value="控制变量">控制变量</option>
+        <option value="调节变量">调节变量</option>
+        <option value="中介变量">中介变量</option>
+      </select>
+    `;
+  } else {
+    bodyHtml = `<input type="text" id="cardItemName" placeholder="名称" autofocus>`;
+  }
+
+  overlay.innerHTML = `
+    <div class="term-modal">
+      <div class="term-modal-title">${titles[cardType] || '新建'}</div>
+      ${bodyHtml}
+      <div class="term-modal-actions">
+        <button class="btn btn-cancel" id="cardItemCancel">取消</button>
+        <button class="btn btn-primary" id="cardItemSave">保存</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.querySelector('#cardItemCancel').onclick = close;
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  overlay.querySelector('#cardItemSave').onclick = async () => {
+    if (cardType === 'papers') {
+      const title = overlay.querySelector('#cardItemTitle').value.trim();
+      if (!title) { alert('请输入论文标题'); return; }
+      const data = {
+        title,
+        authors: overlay.querySelector('#cardItemAuthors').value.trim(),
+        journal: overlay.querySelector('#cardItemJournal').value.trim(),
+        year: parseInt(overlay.querySelector('#cardItemYear').value) || null,
+        abstract: overlay.querySelector('#cardItemAbstract').value.trim()
+      };
+      await db.createPaper(tid, data);
+      close();
+      renderCenter(getSelectedTopic());
+    } else if (cardType === 'theories') {
+      const name = overlay.querySelector('#cardItemName').value.trim();
+      if (!name) { alert('请输入理论名称'); return; }
+      await db.createTheory(tid, name);
+      close();
+      renderCenter(getSelectedTopic());
+    } else if (cardType === 'variables') {
+      const name = overlay.querySelector('#cardItemName').value.trim();
+      if (!name) { alert('请输入变量名称'); return; }
+      const role = overlay.querySelector('#cardItemRole').value;
+      await db.createVariable(tid, name, role);
+      close();
+      renderCenter(getSelectedTopic());
+    } else if (cardType === 'methods') {
+      const name = overlay.querySelector('#cardItemName').value.trim();
+      if (!name) { alert('请输入方法名称'); return; }
+      await db.createMethod(tid, name);
+      close();
+      renderCenter(getSelectedTopic());
+    } else if (cardType === 'structure') {
+      const name = overlay.querySelector('#cardItemName').value.trim();
+      if (!name) { alert('请输入结构名称'); return; }
+      const sortOrder = getStructures(tid).length;
+      await db.createStructure(tid, name, sortOrder);
+      close();
+      renderCenter(getSelectedTopic());
+    }
+  };
+
+  const firstInput = overlay.querySelector('input[type="text"]');
+  if (firstInput) firstInput.focus();
+}
+
 function renderCardDetail(tid) {
   switch (activeCard) {
     case 'papers':
       return `
         <div class="detail-block">
-          <div class="detail-block-title">已有文献</div>
+          <div class="detail-block-header">
+            <div class="detail-block-title">已有文献</div>
+            <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+          </div>
           <div class="paper-list" id="paperList"></div>
         </div>`;
     case 'theories':
       return `
         <div class="detail-block">
-          <div class="detail-block-title">理论列表</div>
+          <div class="detail-block-header">
+            <div class="detail-block-title">理论列表</div>
+            <button class="btn" id="addCardItem" data-card="theories" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+          </div>
           <div class="detail-list">
             ${getTheories(tid).map(t => `<div class="detail-item"><span class="bullet"></span> ${t.name}</div>`).join('')}
           </div>
@@ -316,7 +428,10 @@ function renderCardDetail(tid) {
     case 'variables':
       return `
         <div class="detail-block">
-          <div class="detail-block-title">变量列表</div>
+          <div class="detail-block-header">
+            <div class="detail-block-title">变量列表</div>
+            <button class="btn" id="addCardItem" data-card="variables" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+          </div>
           <div class="detail-list">
             ${getVariables(tid).map(v => `<div class="detail-item"><span class="bullet"></span> ${v.name} <span class="var-role">(${v.role})</span></div>`).join('')}
           </div>
@@ -324,7 +439,10 @@ function renderCardDetail(tid) {
     case 'methods':
       return `
         <div class="detail-block">
-          <div class="detail-block-title">常用方法</div>
+          <div class="detail-block-header">
+            <div class="detail-block-title">常用方法</div>
+            <button class="btn" id="addCardItem" data-card="methods" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+          </div>
           <div class="detail-list">
             ${getMethods(tid).map(m => `<div class="detail-item"><span class="bullet"></span> ${m.name}</div>`).join('')}
           </div>
@@ -332,7 +450,10 @@ function renderCardDetail(tid) {
     case 'structure':
       return `
         <div class="detail-block">
-          <div class="detail-block-title">综述结构</div>
+          <div class="detail-block-header">
+            <div class="detail-block-title">综述结构</div>
+            <button class="btn" id="addCardItem" data-card="structure" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+          </div>
           <div class="detail-list">
             ${getStructures(tid).map(s => `<div class="detail-item"><span class="bullet"></span> ${s.sortOrder + 1}. ${s.name}</div>`).join('')}
           </div>

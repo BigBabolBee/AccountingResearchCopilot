@@ -688,11 +688,17 @@ main {
   border-radius: var(--radius);
   padding: 16px 20px;
   box-shadow: var(--shadow-sm);
+  min-height: 120px;
+}
+.detail-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 .detail-block-title {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 10px;
 }
 .detail-list {
   display: flex;
