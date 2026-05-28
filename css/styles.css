@@ -675,11 +675,11 @@ main {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(30,58,95,0.15);
 }
-.research-card:nth-child(1).active { border-top: 3px solid var(--card-c1); }
-.research-card:nth-child(2).active { border-top: 3px solid var(--card-c2); }
-.research-card:nth-child(3).active { border-top: 3px solid var(--card-c3); }
-.research-card:nth-child(4).active { border-top: 3px solid var(--card-c4); }
-.research-card:nth-child(5).active { border-top: 3px solid var(--card-c5); }
+.research-card:nth-child(1).active { box-shadow: inset 0 3px 0 0 var(--card-c1); }
+.research-card:nth-child(2).active { box-shadow: inset 0 3px 0 0 var(--card-c2); }
+.research-card:nth-child(3).active { box-shadow: inset 0 3px 0 0 var(--card-c3); }
+.research-card:nth-child(4).active { box-shadow: inset 0 3px 0 0 var(--card-c4); }
+.research-card:nth-child(5).active { box-shadow: inset 0 3px 0 0 var(--card-c5); }
 
 /* ── Card Detail Block ── */
 .detail-block {
