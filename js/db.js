@@ -5,13 +5,15 @@ const db = (() => {
 
   async function loadAll() {
     if (!uid()) return;
-    // RLS handles ownership filtering — return own + shared topics & their data
     const tables = ['topics', 'papers', 'theories', 'variables', 'methods', 'structures', 'term_expansions'];
-    for (const table of tables) {
-      const { data, error } = await supabase.from(table).select('*');
-      window['_' + table] = data || [];
-      if (error) { console.error('loadAll ' + table, error); continue; }
-    }
+    // Fire all queries in parallel
+    const results = await Promise.all(
+      tables.map(async (table) => {
+        const { data, error } = await supabase.from(table).select('*');
+        if (error) { console.error('loadAll ' + table, error); }
+        window['_' + table] = data || [];
+      })
+    );
     topics = (_topics || []).map(rowToTopic);
     papers = (_papers || []).map(rowToPaper);
     theories = (_theories || []).map(rowToTheory);

@@ -13,7 +13,11 @@ if (window._supabaseClient) {
     if (session?.user) {
       currentUser = { id: session.user.id, email: session.user.email, role: 'researcher' };
       showApp();
-      // Only init app on first SIGNED_IN, skip TOKEN_REFRESHED / SIGNED_IN on page load
+      // Show loading state in center while data loads
+      const centerEl = document.getElementById('centerArea');
+      if (centerEl && !appInitialized) {
+        centerEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%"><div class="loading-dots">加载中<span>.</span><span>.</span><span>.</span></div></div>';
+      }
       if (appInitialized) return;
       // Defer heavy async work so it doesn't block the SDK's internal promise chain
       setTimeout(async () => {
