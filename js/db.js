@@ -85,7 +85,7 @@ const db = (() => {
   async function createPaper(topicId, data) {
     const id = newId();
     await insert('papers', { id, topic_id: topicId, title: data.title, authors: data.authors || '', journal: data.journal || '', year: data.year || null, abstract: data.abstract || '', tags: data.tags || [], theory: data.theory || '' });
-    papers.push({ id, topicId, ...data });
+    papers.push({ id, topicId, title: data.title, authors: data.authors || '', journal: data.journal || '', year: data.year || null, abstract: data.abstract || '', tags: data.tags || [], theory: data.theory || '' });
     return id;
   }
   async function updatePaper(paperId, fields) {
