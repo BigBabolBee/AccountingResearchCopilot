@@ -282,3 +282,45 @@ async function searchSemanticScholar(query) {
     source: 'Semantic Scholar'
   }));
 }
+
+// ── PDF Paper Metadata Extraction ──
+async function extractPaperMetadata(pdfText, config) {
+  const textSample = pdfText.slice(0, 4000);
+
+  const systemPrompt = `你是一个学术论文元数据提取助手。用户提供论文文本片段，你需要从中提取结构化信息。
+
+必须返回严格 JSON：
+{
+  "title": "论文标题",
+  "authors": "作者列表，逗号分隔",
+  "year": 发表年份数字或null,
+  "journal": "期刊名称或空字符串",
+  "abstract": "摘要或空字符串"
+}
+只返回JSON，不要其他文字。`;
+
+  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `提取以下论文的元数据：\n\n${textSample}` }
+      ],
+      temperature: 0.1,
+      max_tokens: 1000
+    })
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`AI API 错误 (${resp.status})`);
+  }
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content || '{}';
+  const match = content.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('AI 返回格式异常');
+  return JSON.parse(match[0]);
+}

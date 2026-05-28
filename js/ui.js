@@ -105,6 +105,17 @@ function renderCenter(topic) {
     });
   }
 
+  // PDF upload
+  const uploadBtn = document.getElementById('uploadPdfBtn');
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', function() {
+      document.getElementById('pdfFileInput').click();
+    });
+    document.getElementById('pdfFileInput').addEventListener('change', function() {
+      handlePdfUpload(this.files[0]);
+    });
+  }
+
   rebindOutlineEvents();
   renderRightPanel(topic);
 }
@@ -403,6 +414,75 @@ function showCardItemModal(cardType) {
   if (firstInput) firstInput.focus();
 }
 
+async function handlePdfUpload(file) {
+  if (!file) return;
+  const config = loadAiConfig();
+  if (!config.apiKey || !config.baseUrl || !config.model) {
+    alert('请先在 AI 拓展中配置 API（密钥、地址、模型）');
+    return;
+  }
+
+  // Show processing modal
+  const overlay = document.createElement('div');
+  overlay.className = 'term-modal-overlay';
+  overlay.innerHTML = `
+    <div class="term-modal" style="text-align:center">
+      <div class="term-modal-title">正在解析 PDF...</div>
+      <div id="pdfProgress" style="font-size:13px;color:var(--text-secondary);margin:12px 0">提取文本中...</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const updateProgress = (msg) => {
+    const el = document.getElementById('pdfProgress');
+    if (el) el.textContent = msg;
+  };
+
+  try {
+    // Step 1: Extract text using pdf.js
+    updateProgress('正在读取 PDF...');
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    let fullText = '';
+    const maxPages = Math.min(pdf.numPages, 10); // first 10 pages are enough for metadata
+    for (let i = 1; i <= maxPages; i++) {
+      updateProgress(`提取文本中... (第 ${i}/${maxPages} 页)`);
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+
+    if (fullText.trim().length < 100) {
+      throw new Error('PDF 文本内容过少，可能是扫描版 PDF，暂不支持');
+    }
+
+    // Step 2: Send to AI for extraction
+    updateProgress('正在调用 AI 提取论文信息...');
+    const paperData = await extractPaperMetadata(fullText, config);
+
+    // Step 3: Save to db
+    const topic = getSelectedTopic();
+    if (!topic) throw new Error('未找到当前研究主题');
+
+    await db.createPaper(topic.id, paperData);
+    overlay.remove();
+
+    // Refresh UI
+    activeCard = 'papers';
+    renderCenter(getSelectedTopic());
+
+  } catch (e) {
+    overlay.remove();
+    alert('解析失败：' + (e.message || '未知错误'));
+  } finally {
+    // Reset file input so user can re-upload the same file
+    const fileInput = document.getElementById('pdfFileInput');
+    if (fileInput) fileInput.value = '';
+  }
+}
+
 function renderCardDetail(tid) {
   switch (activeCard) {
     case 'papers':
@@ -410,7 +490,11 @@ function renderCardDetail(tid) {
         <div class="detail-block">
           <div class="detail-block-header">
             <div class="detail-block-title">已有文献</div>
-            <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+            <div style="display:flex;gap:6px">
+              <input type="file" id="pdfFileInput" accept=".pdf" style="display:none">
+              <button class="btn" id="uploadPdfBtn" style="height:24px;font-size:11px;padding:0 8px">上传 PDF</button>
+              <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+            </div>
           </div>
           <div class="paper-list" id="paperList"></div>
         </div>`;
