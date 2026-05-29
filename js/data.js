@@ -521,6 +521,7 @@ async function extractPaperStructured(paper, config) {
     body: JSON.stringify({
       model: config.model,
       messages: [
+        { role: 'system', content: 'You extract structured data from academic papers. Output ONLY valid JSON, no markdown.' },
         { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + paper.title + '\nabstract: ' + paper.abstract }
       ],
       temperature: 0.1,
