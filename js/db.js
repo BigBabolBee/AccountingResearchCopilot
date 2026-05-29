@@ -28,7 +28,17 @@ const db = (() => {
     return { id: r.id, name: r.name, userId: r.user_id, createdAt: new Date(r.created_at).getTime(), modifiedAt: new Date(r.modified_at).getTime() };
   }
   function rowToPaper(r) {
-    return { id: r.id, topicId: r.topic_id, title: r.title, authors: r.authors, journal: r.journal, year: r.year, abstract: r.abstract, tags: r.tags || [], theory: r.theory };
+    return {
+      id: r.id, topicId: r.topic_id, title: r.title, authors: r.authors,
+      journal: r.journal, year: r.year, abstract: r.abstract,
+      tags: r.tags || [], theory: r.theory || '',
+      researchTopic: r.research_topic || '',
+      coreConcepts: r.core_concepts || [],
+      extractionTheories: r.extraction_theories || [],
+      extractionVariables: r.extraction_variables || [],
+      relationships: r.relationships || [],
+      evidence: r.evidence || []
+    };
   }
   function rowToTheory(r) {
     return { id: r.id, topicId: r.topic_id, name: r.name };
@@ -86,15 +96,47 @@ const db = (() => {
   // ── Papers ──
   async function createPaper(topicId, data) {
     const id = newId();
-    await insert('papers', { id, topic_id: topicId, title: data.title, authors: data.authors || '', journal: data.journal || '', year: data.year || null, abstract: data.abstract || '', tags: data.tags || [], theory: data.theory || '' });
-    papers.push({ id, topicId, title: data.title, authors: data.authors || '', journal: data.journal || '', year: data.year || null, abstract: data.abstract || '', tags: data.tags || [], theory: data.theory || '' });
+    const obj = {
+      id, topic_id: topicId,
+      title: data.title, authors: data.authors || '', journal: data.journal || '',
+      year: data.year || null, abstract: data.abstract || '',
+      tags: data.tags || [], theory: data.theory || '',
+      research_topic: data.researchTopic || '',
+      core_concepts: data.coreConcepts || [],
+      extraction_theories: data.extractionTheories || [],
+      extraction_variables: data.extractionVariables || [],
+      relationships: data.relationships || [],
+      evidence: data.evidence || []
+    };
+    await insert('papers', obj);
+    papers.push({
+      id, topicId,
+      title: data.title, authors: data.authors || '', journal: data.journal || '',
+      year: data.year || null, abstract: data.abstract || '',
+      tags: data.tags || [], theory: data.theory || '',
+      researchTopic: data.researchTopic || '',
+      coreConcepts: data.coreConcepts || [],
+      extractionTheories: data.extractionTheories || [],
+      extractionVariables: data.extractionVariables || [],
+      relationships: data.relationships || [],
+      evidence: data.evidence || []
+    });
     return id;
   }
   async function updatePaper(paperId, fields) {
     const p = papers.find(p => p.id === paperId);
     if (!p) return;
     Object.assign(p, fields);
-    await updateRow('papers', paperId, { title: p.title, authors: p.authors, journal: p.journal, year: p.year, abstract: p.abstract, tags: p.tags, theory: p.theory });
+    await updateRow('papers', paperId, {
+      title: p.title, authors: p.authors, journal: p.journal, year: p.year,
+      abstract: p.abstract, tags: p.tags, theory: p.theory,
+      research_topic: p.researchTopic,
+      core_concepts: p.coreConcepts,
+      extraction_theories: p.extractionTheories,
+      extraction_variables: p.extractionVariables,
+      relationships: p.relationships,
+      evidence: p.evidence
+    });
   }
   async function deletePaper(paperId) {
     papers = papers.filter(p => p.id !== paperId);

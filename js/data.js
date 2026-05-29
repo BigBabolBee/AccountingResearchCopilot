@@ -453,7 +453,8 @@ async function searchSemanticScholar(query) {
 async function extractPaperMetadata(pdfText, config) {
   const textSample = pdfText.slice(0, 4000);
 
-  const systemPrompt = `Extract metadata from this academic paper text. Return ONLY valid JSON:
+  // Phase 1: basic metadata (title, authors, year, journal, abstract)
+  const metaPrompt = `Extract metadata from this academic paper text. Return ONLY valid JSON:
 
 {
   "title": "the paper title exactly as written",
@@ -469,13 +470,13 @@ Rules:
 - year must be a number or 0 if not found
 - Only return JSON, no other text`;
 
-  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+  const metaResp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: metaPrompt },
         { role: 'user', content: `提取以下论文的元数据：\n\n${textSample}` }
       ],
       temperature: 0.1,
@@ -483,14 +484,69 @@ Rules:
     })
   });
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`AI API 错误 (${resp.status})`);
+  if (!metaResp.ok) {
+    const text = await metaResp.text();
+    throw new Error(`AI API 错误 (${metaResp.status})`);
   }
 
-  const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content || '{}';
-  const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('AI 返回格式异常');
-  return JSON.parse(match[0]);
+  const metaData = await metaResp.json();
+  const metaContent = metaData.choices?.[0]?.message?.content || '{}';
+  const metaMatch = metaContent.match(/\{[\s\S]*\}/);
+  if (!metaMatch) throw new Error('AI 返回格式异常（基本元数据）');
+  const basic = JSON.parse(metaMatch[0]);
+
+  // Phase 2: structured extraction using the "提取器" prompt
+  const extractorPrompt = config.prompts?.['提取器']
+    || DEFAULT_PROMPTS['提取器'];
+
+  const extractorResp = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: extractorPrompt },
+        { role: 'user', content: `paper title: ${basic.title}\nabstract: ${basic.abstract}` }
+      ],
+      temperature: 0.1,
+      max_tokens: 2000
+    })
+  });
+
+  if (!extractorResp.ok) {
+    // If extraction fails, return basic metadata with empty structured fields
+    return {
+      title: basic.title, authors: basic.authors, year: basic.year,
+      journal: basic.journal, abstract: basic.abstract,
+      researchTopic: '', coreConcepts: [], extractionTheories: [],
+      extractionVariables: [], relationships: [], evidence: []
+    };
+  }
+
+  const extData = await extractorResp.json();
+  const extContent = extData.choices?.[0]?.message?.content || '{}';
+  const extMatch = extContent.match(/\{[\s\S]*\}/);
+  if (!extMatch) {
+    return {
+      title: basic.title, authors: basic.authors, year: basic.year,
+      journal: basic.journal, abstract: basic.abstract,
+      researchTopic: '', coreConcepts: [], extractionTheories: [],
+      extractionVariables: [], relationships: [], evidence: []
+    };
+  }
+  const structured = JSON.parse(extMatch[0]);
+
+  return {
+    title: basic.title,
+    authors: basic.authors,
+    year: basic.year,
+    journal: basic.journal,
+    abstract: basic.abstract,
+    researchTopic: structured.research_topic || '',
+    coreConcepts: structured.core_concepts || [],
+    extractionTheories: structured.theories || [],
+    extractionVariables: structured.variables || [],
+    relationships: structured.relationships || [],
+    evidence: structured.evidence || []
+  };
 }

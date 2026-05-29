@@ -337,20 +337,63 @@ function renderPapers(papersList) {
 function showPaperDetailModal(paper) {
   const overlay = document.createElement('div');
   overlay.className = 'term-modal-overlay';
+
+  const hasExtraction = paper.researchTopic || (paper.coreConcepts||[]).length
+    || (paper.extractionTheories||[]).length || (paper.extractionVariables||[]).length
+    || (paper.relationships||[]).length || (paper.evidence||[]).length;
+
+  function renderExtraction() {
+    if (!hasExtraction) return '<div style="font-size:12px;color:var(--text-tertiary);text-align:center;padding:12px">暂无 AI 提取的结构化数据，可通过上传 PDF 自动提取</div>';
+
+    let html = '';
+    if (paper.researchTopic) {
+      html += `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px">1. Research Topic</div><div style="font-size:13px;color:var(--text)">${escapeHtml(paper.researchTopic)}</div></div>`;
+    }
+    if ((paper.coreConcepts||[]).length) {
+      html += `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">2. Core Concepts</div><div style="display:flex;gap:4px;flex-wrap:wrap">${paper.coreConcepts.map(c => `<span style="font-size:12px;background:var(--bg);padding:2px 8px;border-radius:3px;color:var(--text-secondary)">${escapeHtml(c)}</span>`).join('')}</div></div>`;
+    }
+    if ((paper.extractionTheories||[]).length) {
+      html += `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">3. Theories</div><div style="display:flex;gap:4px;flex-wrap:wrap">${paper.extractionTheories.map(t => `<span style="font-size:12px;background:var(--bg);padding:2px 8px;border-radius:3px;color:var(--text-secondary)">${escapeHtml(t)}</span>`).join('')}</div></div>`;
+    }
+    if ((paper.extractionVariables||[]).length) {
+      html += `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">4. Variables</div>`;
+      paper.extractionVariables.forEach(v => {
+        html += `<span style="font-size:12px;background:var(--bg);padding:2px 8px;border-radius:3px;margin-right:4px;margin-bottom:4px;display:inline-block;color:var(--text-secondary)">${escapeHtml(v.variable_name)} <span style="font-size:10px;opacity:0.6">[${escapeHtml(v.variable_role)}]</span></span>`;
+      });
+      html += `</div>`;
+    }
+    if ((paper.relationships||[]).length) {
+      html += `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">5. Research Relationships</div>`;
+      paper.relationships.forEach(r => {
+        html += `<div style="font-size:12px;color:var(--text-secondary);padding:2px 0"><span style="font-weight:500">${escapeHtml(r.subject)}</span> <span style="color:var(--accent);font-size:10px">→ ${r.relation} →</span> <span style="font-weight:500">${escapeHtml(r.object)}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if ((paper.evidence||[]).length) {
+      html += `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">6. Evidence Sentences</div>`;
+      paper.evidence.forEach((e, i) => {
+        html += `<div style="font-size:11px;color:var(--text-tertiary);padding:3px 8px;margin-bottom:2px;border-left:2px solid var(--border);line-height:1.5">${escapeHtml(e)}</div>`;
+      });
+      html += `</div>`;
+    }
+    return html;
+  }
+
   overlay.innerHTML = `
-    <div class="term-modal">
+    <div class="term-modal" style="width:680px">
       <div class="term-modal-title">${escapeHtml(paper.title)}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-secondary)">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--text-secondary)">
         <span>${escapeHtml(paper.authors || '—')}</span>
         <span>${escapeHtml(paper.journal || '—')}</span>
         <span>${paper.year || '—'}</span>
       </div>
-      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;max-height:200px;overflow-y:auto">
+      ${paper.tags && paper.tags.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${paper.tags.map(t => `<span class="paper-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${paper.theory ? `<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">理论基础：${escapeHtml(paper.theory)}</div>` : ''}
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px;max-height:120px;overflow-y:auto;padding:8px 12px;background:var(--bg);border-radius:var(--radius-sm)">
         ${escapeHtml(paper.abstract || '暂无摘要')}
       </div>
-      ${paper.tags && paper.tags.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${paper.tags.map(t => `<span class="paper-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-      ${paper.theory ? `<div style="font-size:12px;color:var(--text-tertiary)">理论基础：${escapeHtml(paper.theory)}</div>` : ''}
-      <div class="term-modal-actions">
+      ${hasExtraction ? `<div style="border-top:1px solid var(--border);padding-top:14px">${renderExtraction()}</div>` : renderExtraction()}
+      <div class="term-modal-actions" style="margin-top:12px">
         <button class="btn btn-cancel" id="detailClose">关闭</button>
       </div>
     </div>
@@ -531,9 +574,10 @@ async function handlePdfUpload(file) {
       throw new Error('PDF 文本内容过少，可能是扫描版 PDF，暂不支持');
     }
 
-    // Step 2: Send to AI for extraction
-    updateProgress('正在调用 AI 提取论文信息...');
+    // Step 2: Two-phase AI extraction
+    updateProgress('AI 提取基本元数据中...');
     const paperData = await extractPaperMetadata(fullText, config);
+    updateProgress('AI 结构化提取完成');
 
     if (!paperData.title) {
       throw new Error('AI 未能提取到论文标题。请确认 PDF 是文字版（非扫描件），且前几页包含标题信息。');
