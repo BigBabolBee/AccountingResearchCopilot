@@ -63,8 +63,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- ═══════════════════════ INITIAL LOADING ═══════════════════════ -->
+<div id="loadingOverlay" class="auth-container">
+  <div class="loading-dots">ResearchCopilot 加载中<span>.</span><span>.</span><span>.</span></div>
+</div>
+
 <!-- ═══════════════════════ AUTH CONTAINER ═══════════════════════ -->
-<div id="authContainer" class="auth-container">
+<div id="authContainer" class="auth-container" style="display:none">
   <div class="auth-card">
     <div class="auth-logo">
       <div class="logo-icon">Σ</div>

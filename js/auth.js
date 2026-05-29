@@ -51,8 +51,10 @@ async function db_getProfile(userId) {
 
 // ── UI toggle ──
 function showApp() {
+  const loadEl = document.getElementById('loadingOverlay');
   const authEl = document.getElementById('authContainer');
   const appEl = document.getElementById('appContent');
+  if (loadEl) loadEl.style.display = 'none';
   if (authEl) authEl.style.display = 'none';
   if (appEl) { appEl.style.display = 'flex'; appEl.style.flexDirection = 'column'; appEl.style.height = '100vh'; }
   const el = document.getElementById('userEmail');
@@ -60,8 +62,10 @@ function showApp() {
 }
 
 function showAuth() {
+  const loadEl = document.getElementById('loadingOverlay');
   const authEl = document.getElementById('authContainer');
   const appEl = document.getElementById('appContent');
+  if (loadEl) loadEl.style.display = 'none';
   if (authEl) authEl.style.display = 'flex';
   if (appEl) appEl.style.display = 'none';
 }
