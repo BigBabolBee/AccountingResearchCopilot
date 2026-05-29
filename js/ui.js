@@ -429,10 +429,12 @@ function showCardItemModal(cardType) {
     if (cardType === 'papers') {
       const title = overlay.querySelector('#cardItemTitle').value.trim();
       if (!title) { alert('请输入论文标题'); return; }
+      const authors = overlay.querySelector('#cardItemAuthors').value.trim();
+      if (isDuplicatePaper(tid, title, authors)) { alert('该论文已存在（标题与作者一致）'); return; }
       const tags = overlay.querySelector('#cardItemTags')?.value.trim().split(',').map(t => t.trim()).filter(Boolean) || [];
       const data = {
         title,
-        authors: overlay.querySelector('#cardItemAuthors').value.trim(),
+        authors,
         journal: overlay.querySelector('#cardItemJournal').value.trim(),
         year: parseInt(overlay.querySelector('#cardItemYear').value) || null,
         abstract: overlay.querySelector('#cardItemAbstract').value.trim(),
@@ -473,6 +475,16 @@ function showCardItemModal(cardType) {
 
   const firstInput = overlay.querySelector('input[type="text"]');
   if (firstInput) firstInput.focus();
+}
+
+function isDuplicatePaper(topicId, title, authors) {
+  const existing = getPapers(topicId);
+  const t = title.trim().toLowerCase();
+  const a = authors.trim().toLowerCase();
+  return existing.some(p =>
+    p.title.trim().toLowerCase() === t &&
+    p.authors.trim().toLowerCase() === a
+  );
 }
 
 async function handlePdfUpload(file) {
@@ -527,9 +539,12 @@ async function handlePdfUpload(file) {
       throw new Error('AI 未能提取到论文标题。请确认 PDF 是文字版（非扫描件），且前几页包含标题信息。');
     }
 
-    // Step 3: Save to db
     const topic = getSelectedTopic();
     if (!topic) throw new Error('未找到当前研究主题');
+
+    if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) {
+      throw new Error('该论文已存在（标题与作者一致），请勿重复添加');
+    }
 
     await db.createPaper(topic.id, paperData);
     overlay.remove();
