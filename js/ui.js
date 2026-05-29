@@ -459,6 +459,7 @@ function showPaperDetailModal(paper) {
       }
     });
   }
+}
 function showCardItemModal(cardType) {
   const topic = getSelectedTopic();
   if (!topic) return;
