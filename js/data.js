@@ -512,8 +512,8 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  // Mirror the working Phase 1 format exactly: short English prompt, same structure
-  var sysPrompt = 'Extract structured research facts from this paper abstract. Return ONLY valid JSON:\n\n{\n  "research_topic": "one sentence describing what this paper studies",\n  "concepts": ["core concept 1", "core concept 2"],\n  "theories": ["theory name"],\n  "variables": [\n    {"variable_name": "var name", "variable_role": "independent_variable"}\n  ],\n  "relationships": [\n    {"subject": "X", "relation": "affects", "object": "Y"}\n  ]\n}\n\nRules:\n- variable_role must be one of: dependent_variable, independent_variable, moderator, mediator, control_variable\n- relation must be one of: affects, moderates, mediates, correlates_with\n- If a field is not found, use empty string "" or empty array []\n- Only return JSON, no other text';
+  // Minimal test: ask for only two simple fields first
+  var sysPrompt = 'Extract from this paper abstract. Return ONLY valid JSON:\n\n{\n  "research_topic": "what this paper studies",\n  "concepts": ["key concept 1", "key concept 2"]\n}\n\nRules:\n- research_topic is one concise sentence\n- concepts are 2-5 core academic concepts from the text\n- If not found, use "" or []\n- Only return JSON, no other text';
 
   console.log('extractPaperStructured model:', config.model);
 
