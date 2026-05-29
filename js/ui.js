@@ -438,11 +438,14 @@ function showPaperDetailModal(paper) {
   var extractBtn = overlay.querySelector('#detailExtract');
   if (extractBtn) {
     extractBtn.addEventListener('click', async function() {
+      console.log('detailExtract: button clicked');
       var config = loadAiConfig();
+      console.log('detailExtract: config loaded, apiKey=', !!config.apiKey, 'abstractLen=', (paper.abstract||'').length);
       if (!config.apiKey || !config.baseUrl || !config.model) { alert('请先在 AI 拓展中配置 API'); return; }
       if (!paper.abstract || paper.abstract.length < 20) { alert('该论文摘要过短或缺失，无法进行结构化提取'); return; }
       extractBtn.disabled = true;
       extractBtn.textContent = '提取中...';
+      console.log('detailExtract: calling extractPaperStructured');
       try {
         var s = await extractPaperStructured(paper, config);
         var isEmpty = !s.researchTopic && !(s.coreConcepts||[]).length && !(s.extractionTheories||[]).length
