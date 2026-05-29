@@ -453,17 +453,21 @@ async function searchSemanticScholar(query) {
 async function extractPaperMetadata(pdfText, config) {
   const textSample = pdfText.slice(0, 4000);
 
-  const systemPrompt = `你是一个学术论文元数据提取助手。用户提供论文文本片段，你需要从中提取结构化信息。
+  const systemPrompt = `Extract metadata from this academic paper text. Return ONLY valid JSON:
 
-必须返回严格 JSON：
 {
-  "title": "论文标题",
-  "authors": "作者列表，逗号分隔",
-  "year": 发表年份数字或null,
-  "journal": "期刊名称或空字符串",
-  "abstract": "摘要或空字符串"
+  "title": "the paper title exactly as written",
+  "authors": "author names separated by commas",
+  "year": 2024,
+  "journal": "journal or conference name",
+  "abstract": "the abstract text"
 }
-只返回JSON，不要其他文字。`;
+
+Rules:
+- title is ALWAYS required — search the first page for the paper title
+- If you cannot find a field, use empty string "" (never null)
+- year must be a number or 0 if not found
+- Only return JSON, no other text`;
 
   const resp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',

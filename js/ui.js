@@ -523,6 +523,10 @@ async function handlePdfUpload(file) {
     updateProgress('正在调用 AI 提取论文信息...');
     const paperData = await extractPaperMetadata(fullText, config);
 
+    if (!paperData.title) {
+      throw new Error('AI 未能提取到论文标题。请确认 PDF 是文字版（非扫描件），且前几页包含标题信息。');
+    }
+
     // Step 3: Save to db
     const topic = getSelectedTopic();
     if (!topic) throw new Error('未找到当前研究主题');
