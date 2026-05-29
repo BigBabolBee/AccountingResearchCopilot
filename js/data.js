@@ -550,3 +550,47 @@ Rules:
     evidence: structured.evidence || []
   };
 }
+
+// ── Structured extraction for existing paper (title + abstract → 6 fields) ──
+async function extractPaperStructured(paper, config) {
+  if (!paper.title || !paper.abstract) {
+    throw new Error('论文缺少标题或摘要，无法进行结构化提取');
+  }
+
+  const extractorPrompt = (config.prompts && config.prompts['提取器'])
+    || DEFAULT_PROMPTS['提取器'];
+
+  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: 'system', content: extractorPrompt },
+        { role: 'user', content: `paper title: ${paper.title}\nabstract: ${paper.abstract}` }
+      ],
+      temperature: 0.1,
+      max_tokens: 2000
+    })
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`AI API 错误 (${resp.status})`);
+  }
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content || '{}';
+  const match = content.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('AI 返回格式异常，无法解析');
+
+  const structured = JSON.parse(match[0]);
+  return {
+    researchTopic: structured.research_topic || '',
+    coreConcepts: structured.core_concepts || [],
+    extractionTheories: structured.theories || [],
+    extractionVariables: structured.variables || [],
+    relationships: structured.relationships || [],
+    evidence: structured.evidence || []
+  };
+}
