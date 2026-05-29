@@ -146,6 +146,7 @@ main {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 /* ── Sidebar ── */
@@ -210,6 +211,43 @@ main {
   flex-shrink: 0;
   padding: 16px 12px;
   gap: 14px;
+  position: relative;
+  transition: width 0.25s ease, padding 0.25s ease, border 0.25s ease;
+}
+.right-panel.collapsed {
+  width: 0;
+  padding: 16px 0;
+  border-left: none;
+  overflow: hidden;
+}
+.right-panel.collapsed #rightPanelContent {
+  display: none;
+}
+.right-panel-toggle {
+  position: absolute;
+  right: var(--right-panel-w);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  z-index: 10;
+  user-select: none;
+  transition: right 0.25s ease;
+}
+.right-panel-toggle:hover { color: var(--accent); }
+.right-panel-toggle.collapsed {
+  right: 0;
+  border-radius: 4px 0 0 4px;
 }
 .right-panel-header {
   padding-bottom: 10px;

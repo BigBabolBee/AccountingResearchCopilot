@@ -61,6 +61,16 @@ document.addEventListener('DOMContentLoaded', function() {
   var btn = document.getElementById('authSubmitBtn');
   if (btn) btn.onclick = function() { if (window.handleSignIn) window.handleSignIn(); };
 });
+
+function toggleRightPanel() {
+  var panel = document.getElementById('rightPanel');
+  var toggle = document.getElementById('rightPanelToggle');
+  if (!panel || !toggle) return;
+  var collapsed = panel.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed', collapsed);
+  toggle.innerHTML = collapsed ? '&#9654;' : '&#9664;';
+  toggle.title = collapsed ? '展开右侧栏' : '收起右侧栏';
+}
 </script>
 
 <!-- ═══════════════════════ INITIAL LOADING ═══════════════════════ -->
@@ -153,7 +163,10 @@ document.addEventListener('DOMContentLoaded', function() {
   <section class="center" id="centerArea"></section>
 
   <!-- ─── RIGHT PANEL ─── -->
-  <aside class="right-panel" id="rightPanel"></aside>
+  <aside class="right-panel" id="rightPanel">
+    <div id="rightPanelContent" style="width:100%"></div>
+  </aside>
+  <span class="right-panel-toggle" id="rightPanelToggle" title="收起/展开" onclick="toggleRightPanel()">&#9664;</span>
 </main>
 
 </div><!-- /appContent -->

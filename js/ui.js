@@ -121,7 +121,7 @@ function renderCenter(topic) {
 }
 
 function renderRightPanel(topic) {
-  const panel = document.getElementById('rightPanel');
+  const panel = document.getElementById('rightPanelContent');
   if (!panel) return;
   const tid = topic ? topic.id : null;
   const allTerms = tid ? getTermExpansions(tid) : [];
