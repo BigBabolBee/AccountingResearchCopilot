@@ -179,7 +179,9 @@ Return ONLY valid JSON.
 function loadAiConfig() {
   const raw = localStorage.getItem('ai_config');
   const config = raw ? JSON.parse(raw) : { apiKey: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o' };
-  if (!config.prompts) config.prompts = { ...DEFAULT_PROMPTS };
+  // Always merge latest default prompts into config (user can't edit them anyway)
+  if (!config.prompts) config.prompts = {};
+  for (var k in DEFAULT_PROMPTS) { config.prompts[k] = DEFAULT_PROMPTS[k]; }
   return config;
 }
 function saveAiConfig(config) {
