@@ -792,7 +792,10 @@ main {
   background: var(--surface);
   border-radius: 12px;
   padding: 24px 28px;
-  width: 420px;
+  width: 520px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12);
 }
 .term-modal-title {

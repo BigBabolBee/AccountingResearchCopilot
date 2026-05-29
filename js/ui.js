@@ -328,13 +328,26 @@ function showCardItemModal(cardType) {
   let bodyHtml = '';
   if (cardType === 'papers') {
     bodyHtml = `
-      <input type="text" id="cardItemTitle" placeholder="论文标题" style="margin-bottom:10px">
-      <input type="text" id="cardItemAuthors" placeholder="作者" style="margin-bottom:10px">
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input type="text" id="cardItemJournal" placeholder="期刊名称" style="flex:2;margin-bottom:0">
-        <input type="number" id="cardItemYear" placeholder="年份" style="flex:1;margin-bottom:0">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">论文标题 *</label>
+      <input type="text" id="cardItemTitle" placeholder="输入论文完整标题" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">作者</label>
+      <input type="text" id="cardItemAuthors" placeholder="多位作者用逗号分隔，如：张三, 李四" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:2">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">期刊</label>
+          <input type="text" id="cardItemJournal" placeholder="期刊或会议名称" style="margin-bottom:0">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">年份</label>
+          <input type="number" id="cardItemYear" placeholder="如 2024" style="margin-bottom:0">
+        </div>
       </div>
-      <textarea id="cardItemAbstract" placeholder="摘要（可选）" style="width:100%;height:80px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;box-sizing:border-box"></textarea>
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">摘要</label>
+      <textarea id="cardItemAbstract" placeholder="输入或粘贴论文摘要..." style="width:100%;height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;box-sizing:border-box;margin-bottom:12px"></textarea>
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">标签</label>
+      <input type="text" id="cardItemTags" placeholder="多个标签用逗号分隔，如：ESG, 成本粘性" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">理论基础</label>
+      <input type="text" id="cardItemTheory" placeholder="如：代理理论、利益相关者理论" style="margin-bottom:0">
     `;
   } else if (cardType === 'variables') {
     bodyHtml = `
@@ -371,12 +384,15 @@ function showCardItemModal(cardType) {
     if (cardType === 'papers') {
       const title = overlay.querySelector('#cardItemTitle').value.trim();
       if (!title) { alert('请输入论文标题'); return; }
+      const tags = overlay.querySelector('#cardItemTags')?.value.trim().split(',').map(t => t.trim()).filter(Boolean) || [];
       const data = {
         title,
         authors: overlay.querySelector('#cardItemAuthors').value.trim(),
         journal: overlay.querySelector('#cardItemJournal').value.trim(),
         year: parseInt(overlay.querySelector('#cardItemYear').value) || null,
-        abstract: overlay.querySelector('#cardItemAbstract').value.trim()
+        abstract: overlay.querySelector('#cardItemAbstract').value.trim(),
+        tags,
+        theory: overlay.querySelector('#cardItemTheory')?.value.trim() || ''
       };
       await db.createPaper(tid, data);
       close();
@@ -493,7 +509,7 @@ function renderCardDetail(tid) {
             <div style="display:flex;gap:6px">
               <input type="file" id="pdfFileInput" accept=".pdf" style="display:none">
               <button class="btn" id="uploadPdfBtn" style="height:24px;font-size:11px;padding:0 8px">上传 PDF</button>
-              <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
+              <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">手动创建</button>
             </div>
           </div>
           <div class="paper-list" id="paperList"></div>

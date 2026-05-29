@@ -126,7 +126,7 @@ function setAuthLoading(loading) {
   const btn = document.getElementById('authSubmitBtn');
   if (btn) {
     btn.disabled = loading;
-    btn.textContent = loading ? '处理中...' : (window._authMode === 'signup' ? '注册' : '登录');
+    btn.textContent = loading ? '登录中...' : (window._authMode === 'signup' ? '注册' : '登录');
   }
 }
 
