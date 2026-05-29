@@ -154,26 +154,25 @@ GOOD:
 
 ## [OUTPUT]
 
-Return ONLY valid JSON.
+Return ONLY valid JSON, no markdown fences.
 
+Example for a paper about ESG and firm performance:
 {
-"research_topic": "",
-"concepts": [],
-"theories": [],
+"research_topic": "Impact of ESG performance on corporate financial performance",
+"concepts": ["ESG performance", "firm performance", "cost of capital"],
+"theories": ["Stakeholder Theory", "Agency Theory"],
 "variables": [
-{
-"variable_name": "",
-"variable_role": ""
-}
+{"variable_name": "ESG score", "variable_role": "independent_variable"},
+{"variable_name": "ROA", "variable_role": "dependent_variable"},
+{"variable_name": "firm size", "variable_role": "control_variable"}
 ],
 "relationships": [
-{
-"subject": "",
-"relation": "",
-"object": ""
-}
+{"subject": "ESG performance", "relation": "affects", "object": "financial performance"},
+{"subject": "board independence", "relation": "moderates", "object": "ESG-performance relationship"}
 ]
-}`
+}
+
+Now extract from the paper below. Return ONLY the JSON:`
 };
 
 function loadAiConfig() {
