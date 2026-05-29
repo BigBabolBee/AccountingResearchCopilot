@@ -218,6 +218,7 @@ async function translateTerm(term, config) {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
+      enable_thinking: false,
       temperature: 0.2,
       max_tokens: 200
     })
@@ -225,7 +226,7 @@ async function translateTerm(term, config) {
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`API 错误 (${resp.status}): ${text}`);
+    throw new Error('API 错误 (' + resp.status + '): ' + text);
   }
 
   const data = await resp.json();
@@ -356,6 +357,7 @@ async function callAiExpand(term, config, signal) {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
+      enable_thinking: false,
       temperature: 0.4,
       max_tokens: 4000
     }),
@@ -441,8 +443,9 @@ Rules:
       model: config.model,
       messages: [
         { role: 'system', content: metaPrompt },
-        { role: 'user', content: `提取以下论文的元数据：\n\n${textSample}` }
+        { role: 'user', content: '提取以下论文的元数据：\n\n' + textSample }
       ],
+      enable_thinking: false,
       temperature: 0.1,
       max_tokens: 1000
     })
