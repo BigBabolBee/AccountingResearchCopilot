@@ -300,12 +300,31 @@ function renderPapers(papersList) {
           <span class="paper-theory">${p.theory}</span>
         </div>
         <div class="paper-actions">
-          <button class="btn" title="查看详情">详情</button>
-          <button class="btn" title="保存">保存</button>
+          <button class="btn btn-detail" data-action="detail" data-id="${p.id}">详情</button>
+          <button class="btn btn-delete" data-action="delete" data-id="${p.id}">删除</button>
         </div>
       </div>
     </div>
   `).join('');
+
+  container.querySelectorAll('.btn-detail').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const id = this.dataset.id;
+      const paper = papersList.find(p => p.id === id);
+      if (paper) showPaperDetailModal(paper);
+    });
+  });
+
+  container.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      const id = this.dataset.id;
+      if (!confirm('确定要删除这篇文献吗？')) return;
+      await db.deletePaper(id);
+      renderCenter(getSelectedTopic());
+    });
+  });
 
   container.querySelectorAll('.paper-card').forEach(card => {
     card.addEventListener('click', function() {
@@ -313,6 +332,32 @@ function renderPapers(papersList) {
       this.classList.add('selected');
     });
   });
+}
+
+function showPaperDetailModal(paper) {
+  const overlay = document.createElement('div');
+  overlay.className = 'term-modal-overlay';
+  overlay.innerHTML = `
+    <div class="term-modal">
+      <div class="term-modal-title">${escapeHtml(paper.title)}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;color:var(--text-secondary)">
+        <span>${escapeHtml(paper.authors || '—')}</span>
+        <span>${escapeHtml(paper.journal || '—')}</span>
+        <span>${paper.year || '—'}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;max-height:200px;overflow-y:auto">
+        ${escapeHtml(paper.abstract || '暂无摘要')}
+      </div>
+      ${paper.tags && paper.tags.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${paper.tags.map(t => `<span class="paper-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${paper.theory ? `<div style="font-size:12px;color:var(--text-tertiary)">理论基础：${escapeHtml(paper.theory)}</div>` : ''}
+      <div class="term-modal-actions">
+        <button class="btn btn-cancel" id="detailClose">关闭</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#detailClose').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
 function showCardItemModal(cardType) {

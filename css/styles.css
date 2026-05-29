@@ -134,6 +134,12 @@ header {
   border-color: var(--accent);
 }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-delete {
+  background: #fff;
+  color: #c0392b;
+  border-color: #e74c3c;
+}
+.btn-delete:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
 
 /* ── Layout ── */
 main {
