@@ -57,32 +57,15 @@ async function initData() {
 
 // ── AI Config (per-browser, still localStorage) ──
 const DEFAULT_PROMPTS = {
-  '提取器': `You are an academic information extraction engine.
+  '提取器': `You are an academic paper information extraction engine.
 
-Your task is NOT to summarize the paper.
+Your task is to extract structured research facts from a paper abstract.
 
-Your task is to extract structured research facts from an academic paper abstract.
-
-You must strictly follow the instructions below.
-
----
-
-## [GOAL]
-
-Extract only explicit and academically meaningful research objects from the paper.
-
-The output will be used to build a structured research knowledge base.
-
-You must prioritize:
-
-* precision
-* stability
-* low hallucination
-* structured output
-
+Do NOT summarize the paper.
+Do NOT explain the paper.
 Do NOT infer hidden meanings.
 
-Do NOT generate speculative interpretations.
+Only extract information explicitly supported by the text.
 
 ---
 
@@ -90,29 +73,28 @@ Do NOT generate speculative interpretations.
 
 You will receive:
 
-* paper title
+* title
 * abstract
 * keywords (optional)
 
 ---
 
-## [EXTRACTION TARGETS]
+## [EXTRACT]
 
-Extract the following fields:
+Extract:
 
 1. research_topic
-   The main research topic of the paper.
+   Main research topic.
 
-2. core_concepts
-   Core academic concepts explicitly studied in the paper.
+2. concepts
+   Core academic concepts explicitly studied.
 
 3. theories
-   Explicitly mentioned or clearly adopted theoretical frameworks.
+   Explicitly mentioned theoretical frameworks.
 
 4. variables
-   Research variables appearing in the paper.
 
-Each variable must include:
+For each variable return:
 
 * variable_name
 * variable_role
@@ -127,9 +109,8 @@ Allowed roles:
 * unknown
 
 5. relationships
-   Research relationships explicitly investigated.
 
-Each relationship must include:
+For each relationship return:
 
 * subject
 * relation
@@ -143,62 +124,41 @@ Allowed relations:
 * correlates_with
 * investigates
 
-6. evidence
-   Original sentences or phrases from the abstract supporting the extraction.
-
 ---
 
-## [IMPORTANT RULES]
+## [RULES]
 
 1. Only extract concepts explicitly supported by the text.
 
-2. Do NOT invent theories, mechanisms, variables, or relationships.
+2. If uncertain, return empty array.
 
-3. If uncertain:
+3. Do NOT invent theories, variables, or relationships.
 
-* return empty array
-* do NOT guess
+4. Use concise canonical academic terms.
 
-4. Prefer canonical academic names.
+5. Ignore generic methodology phrases such as:
 
-5. Keep terminology concise.
-
-6. Do NOT extract generic methodological phrases such as:
-
-* empirical analysis
-* regression model
+* regression analysis
 * panel data
-* questionnaire survey
+* empirical study
 
-unless they are themselves research objects.
-
-7. Do NOT extract broad meaningless concepts such as:
-
-* enterprise development
-* management innovation
-* economic growth
-
-unless they are central research constructs.
-
-8. Variables must be normalized into concise academic terms.
+6. Normalize variables into short academic terms.
 
 BAD:
-"the degree of digital transformation of enterprises"
+"the degree of enterprise digital transformation"
 
 GOOD:
 "digital transformation"
 
-9. Evidence must quote the original abstract text.
-
 ---
 
-## [OUTPUT FORMAT]
+## [OUTPUT]
 
 Return ONLY valid JSON.
 
 {
 "research_topic": "",
-"core_concepts": [],
+"concepts": [],
 "theories": [],
 "variables": [
 {
@@ -212,13 +172,8 @@ Return ONLY valid JSON.
 "relation": "",
 "object": ""
 }
-],
-"evidence": []
-}
-
-Do NOT include markdown.
-Do NOT include explanations.
-Do NOT include commentary.`
+]
+}`
 };
 
 function loadAiConfig() {
@@ -557,22 +512,7 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  // Use a shorter prompt that smaller models can handle
-  const extractorPrompt = `Extract the following from the paper. Return ONLY valid JSON, no markdown, no explanation:
-
-{
-  "research_topic": "one sentence describing what this paper studies",
-  "core_concepts": ["concept1", "concept2"],
-  "theories": ["theory1"],
-  "variables": [{"variable_name": "x", "variable_role": "independent_variable"}],
-  "relationships": [{"subject": "x", "relation": "affects", "object": "y"}],
-  "evidence": ["original sentence from abstract"]
-}
-
-Allowed variable_role: dependent_variable, independent_variable, moderator, mediator, control_variable
-Allowed relation: affects, moderates, mediates, correlates_with
-
-If not found, use empty string "" or empty array [].`;
+  var extractorPrompt = (config.prompts && config.prompts['提取器']) || DEFAULT_PROMPTS['提取器'];
 
   const resp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
@@ -603,10 +543,10 @@ If not found, use empty string "" or empty array [].`;
   console.log('extractPaperStructured parsed:', JSON.stringify(structured).slice(0, 500));
   return {
     researchTopic: structured.research_topic || '',
-    coreConcepts: structured.core_concepts || [],
+    coreConcepts: structured.concepts || [],
     extractionTheories: structured.theories || [],
     extractionVariables: structured.variables || [],
     relationships: structured.relationships || [],
-    evidence: structured.evidence || []
+    evidence: []
   };
 }
