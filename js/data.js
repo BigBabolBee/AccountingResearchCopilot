@@ -512,35 +512,37 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  var extractorPrompt = (config.prompts && config.prompts['提取器']) || DEFAULT_PROMPTS['提取器'];
-  console.log('extractPaperStructured model:', config.model, 'promptLen:', extractorPrompt.length);
+  // Mirror the working Phase 1 format exactly: short English prompt, same structure
+  var sysPrompt = 'Extract structured research facts from this paper abstract. Return ONLY valid JSON:\n\n{\n  "research_topic": "one sentence describing what this paper studies",\n  "concepts": ["core concept 1", "core concept 2"],\n  "theories": ["theory name"],\n  "variables": [\n    {"variable_name": "var name", "variable_role": "independent_variable"}\n  ],\n  "relationships": [\n    {"subject": "X", "relation": "affects", "object": "Y"}\n  ]\n}\n\nRules:\n- variable_role must be one of: dependent_variable, independent_variable, moderator, mediator, control_variable\n- relation must be one of: affects, moderates, mediates, correlates_with\n- If a field is not found, use empty string "" or empty array []\n- Only return JSON, no other text';
 
-  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+  console.log('extractPaperStructured model:', config.model);
+
+  var resp = await fetch(config.baseUrl + '/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.apiKey },
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'system', content: extractorPrompt },
-        { role: 'user', content: 'paper title: ' + paper.title + '\nabstract: ' + paper.abstract }
+        { role: 'system', content: sysPrompt },
+        { role: 'user', content: '提取以下论文的结构化研究信息：\n\n标题：' + paper.title + '\n摘要：' + (paper.abstract || '').slice(0, 2500) }
       ],
-      temperature: 0.4,
-      max_tokens: 4000
+      temperature: 0.1,
+      max_tokens: 1000
     })
   });
 
   if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`AI API 错误 (${resp.status})`);
+    var t = await resp.text();
+    throw new Error('AI API 错误 (' + resp.status + ')');
   }
 
-  const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content || '{}';
+  var d = await resp.json();
+  var content = d.choices?.[0]?.message?.content || '{}';
   console.log('extractPaperStructured raw:', content.slice(0, 500));
-  const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('AI 返回格式异常，无法解析');
+  var match = content.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('AI 返回格式异常');
 
-  const structured = JSON.parse(match[0]);
+  var structured = JSON.parse(match[0]);
   console.log('extractPaperStructured parsed:', JSON.stringify(structured).slice(0, 500));
   return {
     researchTopic: structured.research_topic || '',
