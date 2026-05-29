@@ -512,8 +512,33 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  // Minimal test: ask for only two simple fields first
-  var sysPrompt = 'Extract from this paper abstract. Return ONLY valid JSON:\n\n{\n  "research_topic": "what this paper studies",\n  "concepts": ["key concept 1", "key concept 2"]\n}\n\nRules:\n- research_topic is one concise sentence\n- concepts are 2-5 core academic concepts from the text\n- If not found, use "" or []\n- Only return JSON, no other text';
+  // Pure Chinese prompt, identical style to translateTerm/callAiExpand
+  var sysPrompt = `你是一名学术论文信息提取助手。
+
+用户提供一篇学术论文的标题和摘要，你需要从中提取结构化的研究信息。
+
+输出格式要求（严格JSON）：
+{
+  "research_topic": "论文研究主题，用一句话概括",
+  "concepts": ["核心概念1", "核心概念2"],
+  "theories": ["使用的理论框架"],
+  "variables": [
+    {"variable_name": "变量名称", "variable_role": "角色"}
+  ],
+  "relationships": [
+    {"subject": "A", "relation": "影响", "object": "B"}
+  ]
+}
+
+角色可选值：因变量、自变量、调节变量、中介变量、控制变量
+关系可选值：影响、调节、中介、相关、研究
+
+规则：
+1. 只提取摘要中明确提到的内容
+2. 找不到的字段填空字符串""或空数组[]
+3. 不要推测、不要补充
+4. 术语用简洁的学术名称
+5. 只返回JSON，不要任何其他文字`;
 
   console.log('extractPaperStructured model:', config.model);
 
@@ -537,8 +562,9 @@ async function extractPaperStructured(paper, config) {
   }
 
   var d = await resp.json();
+  console.log('extractPaperStructured fullResp:', JSON.stringify(d));
   var content = d.choices?.[0]?.message?.content || '{}';
-  console.log('extractPaperStructured raw:', content.slice(0, 500));
+  console.log('extractPaperStructured raw:', content);
   var match = content.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('AI 返回格式异常');
 
