@@ -462,8 +462,7 @@ Rules:
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'system', content: extractorPrompt },
-        { role: 'user', content: `paper title: ${basic.title}\nabstract: ${basic.abstract}` }
+        { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + basic.title + '\nabstract: ' + basic.abstract }
       ],
       temperature: 0.1,
       max_tokens: 2000
@@ -522,8 +521,7 @@ async function extractPaperStructured(paper, config) {
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'system', content: extractorPrompt },
-        { role: 'user', content: `paper title: ${paper.title}\nabstract: ${paper.abstract}` }
+        { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + paper.title + '\nabstract: ' + paper.abstract }
       ],
       temperature: 0.1,
       max_tokens: 2000
