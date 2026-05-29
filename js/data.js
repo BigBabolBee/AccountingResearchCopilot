@@ -513,6 +513,7 @@ async function extractPaperStructured(paper, config) {
   }
 
   var extractorPrompt = (config.prompts && config.prompts['提取器']) || DEFAULT_PROMPTS['提取器'];
+  console.log('extractPaperStructured model:', config.model, 'promptLen:', extractorPrompt.length);
 
   const resp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
