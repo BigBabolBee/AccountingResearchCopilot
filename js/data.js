@@ -581,10 +581,12 @@ async function extractPaperStructured(paper, config) {
 
   const data = await resp.json();
   const content = data.choices?.[0]?.message?.content || '{}';
+  console.log('extractPaperStructured raw:', content.slice(0, 500));
   const match = content.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('AI 返回格式异常，无法解析');
 
   const structured = JSON.parse(match[0]);
+  console.log('extractPaperStructured parsed:', JSON.stringify(structured).slice(0, 500));
   return {
     researchTopic: structured.research_topic || '',
     coreConcepts: structured.core_concepts || [],

@@ -445,6 +445,14 @@ function showPaperDetailModal(paper) {
       extractBtn.textContent = '提取中...';
       try {
         var s = await extractPaperStructured(paper, config);
+        var isEmpty = !s.researchTopic && !(s.coreConcepts||[]).length && !(s.extractionTheories||[]).length
+          && !(s.extractionVariables||[]).length && !(s.relationships||[]).length && !(s.evidence||[]).length;
+        if (isEmpty) {
+          alert('AI 未提取到任何结构化数据。请确认：\n1. 论文摘要包含实质性内容\n2. API 可正常访问\n\n提示：打开 F12 Console 查看 AI 原始输出');
+          extractBtn.disabled = false;
+          extractBtn.textContent = '提取';
+          return;
+        }
         await db.updatePaper(paper.id, {
           researchTopic: s.researchTopic, coreConcepts: s.coreConcepts, extractionTheories: s.extractionTheories,
           extractionVariables: s.extractionVariables, relationships: s.relationships, evidence: s.evidence
