@@ -557,8 +557,22 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  const extractorPrompt = (config.prompts && config.prompts['提取器'])
-    || DEFAULT_PROMPTS['提取器'];
+  // Use a shorter prompt that smaller models can handle
+  const extractorPrompt = `Extract the following from the paper. Return ONLY valid JSON, no markdown, no explanation:
+
+{
+  "research_topic": "one sentence describing what this paper studies",
+  "core_concepts": ["concept1", "concept2"],
+  "theories": ["theory1"],
+  "variables": [{"variable_name": "x", "variable_role": "independent_variable"}],
+  "relationships": [{"subject": "x", "relation": "affects", "object": "y"}],
+  "evidence": ["original sentence from abstract"]
+}
+
+Allowed variable_role: dependent_variable, independent_variable, moderator, mediator, control_variable
+Allowed relation: affects, moderates, mediates, correlates_with
+
+If not found, use empty string "" or empty array [].`;
 
   const resp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
