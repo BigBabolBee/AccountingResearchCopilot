@@ -479,7 +479,12 @@ Rules:
   }
 
   const extData = await extractorResp.json();
-  const extContent = extData.choices?.[0]?.message?.content || '{}';
+  var extContent = extData.choices?.[0]?.message?.content || '';
+  var extReasoning = extData.choices?.[0]?.message?.reasoning_content || '';
+  if (!extContent.trim() && extReasoning.trim()) {
+    var extRMatch = extReasoning.match(/\{[\s\S]*\}/);
+    if (extRMatch) extContent = extRMatch[0];
+  }
   const extMatch = extContent.match(/\{[\s\S]*\}/);
   if (!extMatch) {
     return {
@@ -552,7 +557,7 @@ async function extractPaperStructured(paper, config) {
         { role: 'user', content: '提取以下论文的结构化研究信息：\n\n标题：' + paper.title + '\n摘要：' + (paper.abstract || '').slice(0, 2500) }
       ],
       temperature: 0.1,
-      max_tokens: 1000
+      max_tokens: 4000
     })
   });
 
@@ -562,9 +567,16 @@ async function extractPaperStructured(paper, config) {
   }
 
   var d = await resp.json();
-  console.log('extractPaperStructured fullResp:', JSON.stringify(d));
-  var content = d.choices?.[0]?.message?.content || '{}';
-  console.log('extractPaperStructured raw:', content);
+  // DeepSeek v4 puts thinking in reasoning_content — extract from there if content is empty
+  var content = d.choices?.[0]?.message?.content || '';
+  var reasoning = d.choices?.[0]?.message?.reasoning_content || '';
+  console.log('extractPaperStructured content:', content.slice(0, 200));
+  console.log('extractPaperStructured reasoning_len:', reasoning.length);
+  if (!content.trim() && reasoning.trim()) {
+    // Try to extract JSON from reasoning content
+    var reasonMatch = reasoning.match(/\{[\s\S]*\}/);
+    if (reasonMatch) content = reasonMatch[0];
+  }
   var match = content.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('AI 返回格式异常');
 
