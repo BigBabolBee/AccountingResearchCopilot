@@ -571,7 +571,11 @@ function showPaperDetailModal(paper) {
       var cur = paper[f.field] || '';
       var cls = 'width:100%;border:none;outline:none;font-size:inherit;font-family:inherit;background:transparent;padding:0;color:inherit;line-height:inherit';
       if (f.tag === 'textarea') cls += ';resize:vertical;min-height:80px';
-      el.innerHTML = '<' + f.tag + ' style="' + cls + '">' + escapeHtml(String(cur)) + '</' + f.tag + '>';
+      if (f.tag === 'input') {
+        el.innerHTML = '<input style="' + cls + '" value="' + escapeHtml(String(cur)).replace(/"/g, '&quot;') + '">';
+      } else {
+        el.innerHTML = '<textarea style="' + cls + '">' + escapeHtml(String(cur)) + '</textarea>';
+      }
       var inp = el.querySelector(f.tag);
       inp.focus();
       if (f.tag === 'input') inp.select();
