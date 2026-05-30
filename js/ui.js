@@ -556,6 +556,8 @@ function showPaperDetailModal(paper) {
       extractBtn.disabled = true;
       extractBtn.textContent = '提取中...';
       activeExtractions[paper.id] = true;
+      // Refresh card list so the "AI提取中" tag appears immediately
+      renderCenter(getSelectedTopic());
 
       // Run extraction in background — user can close modal
       (async function() {
