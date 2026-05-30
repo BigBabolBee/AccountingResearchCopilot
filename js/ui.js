@@ -418,37 +418,54 @@ function showPaperDetailModal(paper) {
 
   var extractBtn = overlay.querySelector('#detailExtract');
   if (extractBtn) {
-    extractBtn.addEventListener('click', async function() {
-      console.log('detailExtract: button clicked');
+    // If extraction is already running for this paper, show correct state
+    if (activeExtractions[paper.id]) {
+      extractBtn.disabled = true;
+      extractBtn.textContent = '提取中...';
+    }
+    extractBtn.addEventListener('click', function() {
       var config = loadAiConfig();
-      console.log('detailExtract: config loaded, apiKey=', !!config.apiKey, 'abstractLen=', (paper.abstract||'').length);
       if (!config.apiKey || !config.baseUrl || !config.model) { alert('请先在 AI 拓展中配置 API'); return; }
       if (!paper.abstract || paper.abstract.length < 20) { alert('该论文摘要过短或缺失，无法进行结构化提取'); return; }
       extractBtn.disabled = true;
       extractBtn.textContent = '提取中...';
-      console.log('detailExtract: calling extractPaperStructured');
-      try {
-        var s = await extractPaperStructured(paper, config);
-        var isEmpty = !s.researchTopic && !(s.coreConcepts||[]).length && !(s.extractionTheories||[]).length
-          && !(s.extractionVariables||[]).length && !(s.relationships||[]).length && !(s.evidence||[]).length;
-        if (isEmpty) {
-          alert('AI 未提取到任何结构化数据。请确认：\n1. 论文摘要包含实质性内容\n2. API 可正常访问\n\n提示：打开 F12 Console 查看 AI 原始输出');
-          extractBtn.disabled = false;
-          extractBtn.textContent = '提取';
-          return;
+      activeExtractions[paper.id] = true;
+
+      // Run extraction in background — user can close modal
+      (async function() {
+        try {
+          var s = await extractPaperStructured(paper, config);
+          var isEmpty = !s.researchTopic && !(s.coreConcepts||[]).length && !(s.extractionTheories||[]).length
+            && !(s.extractionVariables||[]).length && !(s.relationships||[]).length && !(s.evidence||[]).length;
+          if (isEmpty) {
+            alert('AI 未提取到任何结构化数据');
+            delete activeExtractions[paper.id];
+            if (document.body.contains(overlay)) {
+              extractBtn.disabled = false;
+              extractBtn.textContent = '提取';
+            }
+            return;
+          }
+          await db.updatePaper(paper.id, {
+            researchTopic: s.researchTopic, coreConcepts: s.coreConcepts, extractionTheories: s.extractionTheories,
+            extractionVariables: s.extractionVariables, relationships: s.relationships, evidence: s.evidence
+          });
+          Object.assign(paper, s);
+          delete activeExtractions[paper.id];
+          // If modal still open, refresh it
+          if (document.body.contains(overlay) && overlay.querySelector('#detailClose')) {
+            overlay.remove();
+            showPaperDetailModal(paper);
+          }
+        } catch (e) {
+          delete activeExtractions[paper.id];
+          if (document.body.contains(overlay)) {
+            extractBtn.disabled = false;
+            extractBtn.textContent = '提取';
+          }
+          alert('提取失败：' + (e.message||'未知错误'));
         }
-        await db.updatePaper(paper.id, {
-          researchTopic: s.researchTopic, coreConcepts: s.coreConcepts, extractionTheories: s.extractionTheories,
-          extractionVariables: s.extractionVariables, relationships: s.relationships, evidence: s.evidence
-        });
-        Object.assign(paper, s);
-        overlay.remove();
-        showPaperDetailModal(paper);
-      } catch (e) {
-        alert('提取失败：' + (e.message||'未知错误'));
-        extractBtn.disabled = false;
-        extractBtn.textContent = '提取';
-      }
+      })();
     });
   }
 
@@ -752,82 +769,52 @@ function isDuplicatePaper(topicId, title, authors) {
   );
 }
 
+// Track active background extractions per paper ID
+var activeExtractions = {};
+
 async function handlePdfUpload(file) {
   if (!file) return;
-  const config = loadAiConfig();
+  var config = loadAiConfig();
   if (!config.apiKey || !config.baseUrl || !config.model) {
     alert('请先在 AI 拓展中配置 API（密钥、地址、模型）');
     return;
   }
 
-  // Show processing modal
-  const overlay = document.createElement('div');
-  overlay.className = 'term-modal-overlay';
-  overlay.innerHTML = `
-    <div class="term-modal" style="text-align:center">
-      <div class="term-modal-title">正在解析 PDF...</div>
-      <div id="pdfProgress" style="font-size:13px;color:var(--text-secondary);margin:12px 0">提取文本中...</div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  const updateProgress = (msg) => {
-    const el = document.getElementById('pdfProgress');
-    if (el) el.textContent = msg;
-  };
+  var btn = document.getElementById('uploadPdfBtn');
+  if (btn) { btn.textContent = '解析中...'; btn.disabled = true; }
 
   try {
-    // Step 1: Extract text using pdf.js
-    updateProgress('正在读取 PDF...');
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-    let fullText = '';
-    const maxPages = Math.min(pdf.numPages, 10); // first 10 pages are enough for metadata
-    for (let i = 1; i <= maxPages; i++) {
-      updateProgress(`提取文本中... (第 ${i}/${maxPages} 页)`);
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      fullText += pageText + '\n';
+    // Step 1: pdf.js text extraction
+    var arrayBuffer = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    var fullText = '';
+    var maxPages = Math.min(pdf.numPages, 10);
+    for (var i = 1; i <= maxPages; i++) {
+      var page = await pdf.getPage(i);
+      var content = await page.getTextContent();
+      fullText += content.items.map(function(item) { return item.str; }).join(' ') + '\n';
     }
-
-    if (fullText.trim().length < 100) {
-      throw new Error('PDF 文本内容过少，可能是扫描版 PDF，暂不支持');
-    }
+    if (fullText.trim().length < 100) throw new Error('PDF 文本内容过少，可能是扫描版 PDF，暂不支持');
 
     // Step 2: Two-phase AI extraction
-    const paperData = await extractPaperMetadata(fullText, config);
+    var paperData = await extractPaperMetadata(fullText, config);
+    if (!paperData.title) throw new Error('AI 未能提取到论文标题');
+    if (paperData._truncated) console.warn('PDF解析：摘要可能不完整');
 
-    if (!paperData.title) {
-      throw new Error('AI 未能提取到论文标题。请确认 PDF 是文字版（非扫描件），且前几页包含标题信息。');
-    }
-
-    if (paperData._truncated) {
-      updateProgress('警告：AI 返回被截断，摘要可能不完整，但核心元数据已保存');
-    }
-
-    const topic = getSelectedTopic();
+    var topic = getSelectedTopic();
     if (!topic) throw new Error('未找到当前研究主题');
-
-    if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) {
-      throw new Error('该论文已存在（标题与作者一致），请勿重复添加');
-    }
+    if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) throw new Error('该论文已存在');
 
     await db.createPaper(topic.id, paperData);
-    overlay.remove();
-
-    // Refresh UI
     activeCard = 'papers';
     renderCenter(getSelectedTopic());
 
   } catch (e) {
-    overlay.remove();
     alert('解析失败：' + (e.message || '未知错误'));
   } finally {
-    // Reset file input so user can re-upload the same file
-    const fileInput = document.getElementById('pdfFileInput');
-    if (fileInput) fileInput.value = '';
+    if (btn) { btn.textContent = '上传 PDF'; btn.disabled = false; }
+    var fi = document.getElementById('pdfFileInput');
+    if (fi) fi.value = '';
   }
 }
 
