@@ -875,23 +875,25 @@ function renderCardDetail(tid) {
         <div class="detail-block">
           <div class="detail-block-header">
             <div class="detail-block-title">已有文献</div>
-            <div style="display:flex;gap:6px">
-              <input type="file" id="pdfFileInput" accept=".pdf" style="display:none">
-              <button class="btn" id="uploadPdfBtn" style="height:24px;font-size:11px;padding:0 8px">上传 PDF</button>
-              <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">手动创建</button>
-            </div>
           </div>
           <div class="paper-list" id="paperList"></div>
+          <div style="display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <input type="file" id="pdfFileInput" accept=".pdf" style="display:none">
+            <button class="btn" id="uploadPdfBtn" style="height:24px;font-size:11px;padding:0 8px">上传 PDF</button>
+            <button class="btn" id="addCardItem" data-card="papers" style="height:24px;font-size:11px;padding:0 8px">手动创建</button>
+          </div>
         </div>`;
     case 'theories':
       return `
         <div class="detail-block">
           <div class="detail-block-header">
             <div class="detail-block-title">理论列表</div>
-            <button class="btn" id="addCardItem" data-card="theories" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
           <div class="detail-list">
             ${getTheories(tid).map(t => `<div class="detail-item"><span class="bullet"></span> ${t.name}</div>`).join('')}
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <button class="btn" id="addCardItem" data-card="theories" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
         </div>`;
     case 'variables':
@@ -899,10 +901,12 @@ function renderCardDetail(tid) {
         <div class="detail-block">
           <div class="detail-block-header">
             <div class="detail-block-title">变量列表</div>
-            <button class="btn" id="addCardItem" data-card="variables" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
           <div class="detail-list">
             ${getVariables(tid).map(v => `<div class="detail-item"><span class="bullet"></span> ${v.name} <span class="var-role">(${v.role})</span></div>`).join('')}
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <button class="btn" id="addCardItem" data-card="variables" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
         </div>`;
     case 'methods':
@@ -910,10 +914,12 @@ function renderCardDetail(tid) {
         <div class="detail-block">
           <div class="detail-block-header">
             <div class="detail-block-title">常用方法</div>
-            <button class="btn" id="addCardItem" data-card="methods" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
           <div class="detail-list">
             ${getMethods(tid).map(m => `<div class="detail-item"><span class="bullet"></span> ${m.name}</div>`).join('')}
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <button class="btn" id="addCardItem" data-card="methods" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
         </div>`;
     case 'structure':
@@ -921,10 +927,12 @@ function renderCardDetail(tid) {
         <div class="detail-block">
           <div class="detail-block-header">
             <div class="detail-block-title">综述结构</div>
-            <button class="btn" id="addCardItem" data-card="structure" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
           <div class="detail-list">
             ${getStructures(tid).map(s => `<div class="detail-item"><span class="bullet"></span> ${s.sortOrder + 1}. ${s.name}</div>`).join('')}
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <button class="btn" id="addCardItem" data-card="structure" style="height:24px;font-size:11px;padding:0 8px">+ 新建</button>
           </div>
         </div>`;
     default:
