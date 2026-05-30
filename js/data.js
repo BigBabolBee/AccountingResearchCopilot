@@ -610,14 +610,26 @@ Rules:
       extractionVariables: [], relationships: [], evidence: [], _truncated: basic._truncated
     };
   }
-  const structured = JSON.parse(extMatch[0]);
+  var structured;
+  try {
+    structured = JSON.parse(extMatch[0]);
+  } catch (extJsonErr) {
+    // Phase 2 JSON malformed — return basic metadata only, structured fields empty
+    console.error('Phase 2 JSON parse error:', extJsonErr.message);
+    return {
+      title: basic.title, authors: basic.authors, year: basic.year,
+      journal: basic.journal, abstract: basic.abstract || '',
+      researchTopic: '', coreConcepts: [], extractionTheories: [],
+      extractionVariables: [], relationships: [], evidence: [], _truncated: basic._truncated
+    };
+  }
 
   return {
     title: basic.title,
     authors: basic.authors,
     year: basic.year,
     journal: basic.journal,
-    abstract: abstract,
+    abstract: basic.abstract || '',
     researchTopic: structured.research_topic || '',
     coreConcepts: structured.core_concepts || [],
     extractionTheories: structured.theories || [],
