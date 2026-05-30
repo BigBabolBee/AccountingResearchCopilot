@@ -308,7 +308,7 @@ function renderPapers(papersList) {
       '<div class="paper-card-footer">' +
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
       '<div class="paper-tags">' + (p.tags || []).map(function(t) { return '<span class="paper-tag">' + t + '</span>'; }).join('') + '</div>' +
-      '<span class="paper-theory">' + (p.theory || '') + '</span>' +
+      (p.theory ? '<span class="paper-theory">' + p.theory + '</span>' : '') +
       extractTag +
       '</div>' +
       (isError ? '<button class="btn btn-delete" data-action="delete" data-id="' + p.id + '">删除</button>' :
@@ -837,15 +837,11 @@ async function handlePdfUpload(file) {
     if (!paperData.title) throw new Error('AI 未能提取到论文标题');
     if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) throw new Error('该论文已存在');
 
-    // Replace placeholder with real paper
-    var idx = papers.findIndex(function(p) { return p.id === placeholderId; });
-    if (idx !== -1) {
-      papers[idx] = { id: paperData.id || placeholderId, topicId: topic.id, title: paperData.title, authors: paperData.authors || '', journal: paperData.journal || '', year: paperData.year || null, abstract: paperData.abstract || '', tags: paperData.tags || [], theory: paperData.theory || '', researchTopic: paperData.researchTopic || '', coreConcepts: paperData.coreConcepts || [], extractionTheories: paperData.extractionTheories || [], extractionVariables: paperData.extractionVariables || [], relationships: paperData.relationships || [], evidence: paperData.evidence || [], _truncated: paperData._truncated };
-      await db.createPaper(topic.id, papers[idx]);
-      papers[idx].id = papers[idx].id; // Keep the db-assigned id
-    }
-    // Reload from DB to get the real id
-    await db.loadAll();
+    // Save to DB, remove placeholder, insert real paper into memory
+    var newId = await db.createPaper(topic.id, paperData);
+    // Remove placeholder WITHOUT reloading (reload would kill other placeholders)
+    papers = papers.filter(function(p) { return p.id !== placeholderId; });
+    // db.createPaper already pushed to papers array, refresh UI
     activeCard = 'papers';
     renderCenter(getSelectedTopic());
 
