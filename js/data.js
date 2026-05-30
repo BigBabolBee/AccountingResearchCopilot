@@ -478,20 +478,19 @@ async function searchSemanticScholar(query) {
 async function extractPaperMetadata(pdfText, config) {
   const textSample = pdfText.slice(0, 4000);
 
-  // Phase 1: basic metadata (title, authors, year, journal, abstract)
+  // Phase 1: basic metadata (title, authors, year, journal) — abstract from raw text
   const metaPrompt = `Extract metadata from this academic paper text. Return ONLY valid JSON:
 
 {
   "title": "the paper title exactly as written",
   "authors": "author names separated by commas",
   "year": 2024,
-  "journal": "journal or conference name",
-  "abstract": "the abstract text"
+  "journal": "journal or conference name"
 }
 
 Rules:
-- title is ALWAYS required — search the first page for the paper title
-- If you cannot find a field, use empty string "" (never null)
+- title is ALWAYS required
+- If you cannot find a field, use empty string ""
 - year must be a number or 0 if not found
 - Only return JSON, no other text`;
 
@@ -539,6 +538,14 @@ Rules:
     }
   }
 
+  // Extract abstract from raw PDF text (AI doesn't return it, to save tokens)
+  var abstract = '';
+  var lines = textSample.split(/\n+/).filter(function(l) { return l.trim().length > 60; });
+  if (lines.length > 2) {
+    abstract = lines.slice(1).reduce(function(a, b) { return b.length > a.length ? b : a; }, lines[1] || '');
+  }
+  abstract = abstract.replace(/\s+/g, ' ').trim().slice(0, 3000);
+
   // Phase 2: structured extraction using the "提取器" prompt
   const extractorPrompt = config.prompts?.['提取器']
     || DEFAULT_PROMPTS['提取器'];
@@ -549,7 +556,7 @@ Rules:
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + basic.title + '\nabstract: ' + basic.abstract }
+        { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + basic.title + '\nabstract: ' + abstract }
       ],
       enable_thinking: false,
       temperature: 0.1,
@@ -561,7 +568,7 @@ Rules:
     // If extraction fails, return basic metadata with empty structured fields
     return {
       title: basic.title, authors: basic.authors, year: basic.year,
-      journal: basic.journal, abstract: basic.abstract,
+      journal: basic.journal, abstract: abstract,
       researchTopic: '', coreConcepts: [], extractionTheories: [],
       extractionVariables: [], relationships: [], evidence: []
     };
@@ -578,7 +585,7 @@ Rules:
   if (!extMatch) {
     return {
       title: basic.title, authors: basic.authors, year: basic.year,
-      journal: basic.journal, abstract: basic.abstract,
+      journal: basic.journal, abstract: abstract,
       researchTopic: '', coreConcepts: [], extractionTheories: [],
       extractionVariables: [], relationships: [], evidence: []
     };
@@ -590,7 +597,7 @@ Rules:
     authors: basic.authors,
     year: basic.year,
     journal: basic.journal,
-    abstract: basic.abstract,
+    abstract: abstract,
     researchTopic: structured.research_topic || '',
     coreConcepts: structured.core_concepts || [],
     extractionTheories: structured.theories || [],
