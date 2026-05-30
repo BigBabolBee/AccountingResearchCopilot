@@ -117,6 +117,8 @@ function renderCenter(topic) {
   }
 
   rebindOutlineEvents();
+  // Ensure stats cache is populated (no-op if already cached)
+  if (!topicStatsCache[tid]) recomputeStats(tid);
   renderRightPanel(topic);
 }
 
@@ -969,10 +971,11 @@ async function handlePdfUpload(file) {
 function renderCardDetail(tid) {
   switch (activeCard) {
     case 'papers':
+      var paperCount = getPapers(tid).length;
       return `
         <div class="detail-block">
           <div class="detail-block-header">
-            <div class="detail-block-title">已有文献</div>
+            <div class="detail-block-title">已有文献 <span style="font-size:10px;color:var(--text-tertiary);font-weight:400">${paperCount} 篇</span></div>
           </div>
           <div class="paper-list" id="paperList"></div>
           <div style="display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
@@ -982,10 +985,11 @@ function renderCardDetail(tid) {
           </div>
         </div>`;
     case 'theories':
+      var theoryCount = getTheories(tid).length;
       return `
         <div class="detail-block">
           <div class="detail-block-header">
-            <div class="detail-block-title">理论列表</div>
+            <div class="detail-block-title">理论列表 <span style="font-size:10px;color:var(--text-tertiary);font-weight:400">${theoryCount} 条</span></div>
           </div>
           <div class="detail-list">
             ${getTheories(tid).map(t => `<div class="detail-item"><span class="bullet"></span> ${t.name}</div>`).join('')}
@@ -995,10 +999,11 @@ function renderCardDetail(tid) {
           </div>
         </div>`;
     case 'variables':
+      var varCount = getVariables(tid).length;
       return `
         <div class="detail-block">
           <div class="detail-block-header">
-            <div class="detail-block-title">变量列表</div>
+            <div class="detail-block-title">变量列表 <span style="font-size:10px;color:var(--text-tertiary);font-weight:400">${varCount} 个</span></div>
           </div>
           <div class="detail-list">
             ${getVariables(tid).map(v => `<div class="detail-item"><span class="bullet"></span> ${v.name} <span class="var-role">(${v.role})</span></div>`).join('')}
@@ -1008,10 +1013,11 @@ function renderCardDetail(tid) {
           </div>
         </div>`;
     case 'methods':
+      var methodCount = getMethods(tid).length;
       return `
         <div class="detail-block">
           <div class="detail-block-header">
-            <div class="detail-block-title">常用方法</div>
+            <div class="detail-block-title">常用方法 <span style="font-size:10px;color:var(--text-tertiary);font-weight:400">${methodCount} 条</span></div>
           </div>
           <div class="detail-list">
             ${getMethods(tid).map(m => `<div class="detail-item"><span class="bullet"></span> ${m.name}</div>`).join('')}
@@ -1021,10 +1027,11 @@ function renderCardDetail(tid) {
           </div>
         </div>`;
     case 'structure':
+      var structCount = getStructures(tid).length;
       return `
         <div class="detail-block">
           <div class="detail-block-header">
-            <div class="detail-block-title">综述结构</div>
+            <div class="detail-block-title">综述结构 <span style="font-size:10px;color:var(--text-tertiary);font-weight:400">${structCount} 条</span></div>
           </div>
           <div class="detail-list">
             ${getStructures(tid).map(s => `<div class="detail-item"><span class="bullet"></span> ${s.sortOrder + 1}. ${s.name}</div>`).join('')}
