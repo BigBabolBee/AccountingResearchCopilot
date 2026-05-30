@@ -758,6 +758,10 @@ async function handlePdfUpload(file) {
       throw new Error('AI 未能提取到论文标题。请确认 PDF 是文字版（非扫描件），且前几页包含标题信息。');
     }
 
+    if (paperData._truncated) {
+      updateProgress('警告：AI 返回被截断，摘要可能不完整，但核心元数据已保存');
+    }
+
     const topic = getSelectedTopic();
     if (!topic) throw new Error('未找到当前研究主题');
 

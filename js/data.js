@@ -493,7 +493,7 @@ Rules:
 - title is ALWAYS required
 - If you cannot find a field, use empty string ""
 - year must be a number or 0 if not found
-- abstract: limit to 300 Chinese characters or 500 English words max
+- abstract: include the FULL abstract text, do not truncate
 - Only return JSON, no other text`;
 
   const metaResp = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -507,7 +507,7 @@ Rules:
       ],
       enable_thinking: false,
       temperature: 0.1,
-      max_tokens: 8000
+      max_tokens: 16384
     })
   });
 
@@ -523,29 +523,54 @@ Rules:
   if (!metaMatch) throw new Error('AI 返回格式异常（基本元数据）');
   var basic;
   var jsonStr = metaMatch[0];
-  // Try to fix truncated JSON (missing closing braces)
-  if (!jsonStr.endsWith('}')) {
-    var lastBrace = jsonStr.lastIndexOf('}');
-    if (lastBrace > jsonStr.length / 2) { jsonStr = jsonStr.slice(0, lastBrace + 1); }
+  var wasTruncated = false;
+
+  // Try to fix truncated JSON
+  function tryParseJson(str) {
+    try { return JSON.parse(str); } catch(e) { return null; }
   }
-  try {
-    basic = JSON.parse(jsonStr);
-  } catch (jsonErr) {
-    var fixed = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*\]/g, ']');
-    try {
-      basic = JSON.parse(fixed);
-    } catch (e2) {
-      console.error('JSON parse error:', jsonErr.message, 'raw:', jsonStr.slice(-200));
+  function extractField(str, key) {
+    var re = new RegExp('"' + key + '"\\s*:\\s*"([^"]*)');
+    var m = str.match(re);
+    return m ? m[1] : '';
+  }
+
+  basic = tryParseJson(jsonStr);
+  if (!basic) {
+    // Fix truncated: try to close at last complete field
+    if (!jsonStr.endsWith('}')) {
+      var lastComma = jsonStr.lastIndexOf(',');
+      if (lastComma > 10) {
+        basic = tryParseJson(jsonStr.slice(0, lastComma) + '\n}');
+      }
+      if (!basic) {
+        // Salvage individual fields from partial JSON
+        basic = {
+          title: extractField(jsonStr, 'title'),
+          authors: extractField(jsonStr, 'authors'),
+          year: parseInt(extractField(jsonStr, 'year')) || 0,
+          journal: extractField(jsonStr, 'journal'),
+          abstract: extractField(jsonStr, 'abstract')
+        };
+        wasTruncated = true;
+      }
+    }
+    if (!basic) {
+      basic = tryParseJson(jsonStr.replace(/,\s*}/g, '}').replace(/,\s*\]/g, ']'));
+    }
+    if (!basic) {
+      console.error('JSON parse error, raw:', jsonStr.slice(-200));
       throw new Error('AI 返回的 JSON 格式有误，请重试');
     }
   }
 
 
-  // Phase 2: structured extraction using the "提取器" prompt
-  const extractorPrompt = config.prompts?.['提取器']
-    || DEFAULT_PROMPTS['提取器'];
+  basic._truncated = wasTruncated;
 
-  const extractorResp = await fetch(`${config.baseUrl}/chat/completions`, {
+  // Phase 2: structured extraction using the "提取器" prompt
+  const extractorPrompt = config.prompts?.['提取器'] || DEFAULT_PROMPTS['提取器'];
+
+  const extractorResp = await fetch(config.baseUrl + '/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
     body: JSON.stringify({
@@ -565,7 +590,7 @@ Rules:
       title: basic.title, authors: basic.authors, year: basic.year,
       journal: basic.journal, abstract: basic.abstract || '',
       researchTopic: '', coreConcepts: [], extractionTheories: [],
-      extractionVariables: [], relationships: [], evidence: []
+      extractionVariables: [], relationships: [], evidence: [], _truncated: basic._truncated
     };
   }
 
@@ -582,7 +607,7 @@ Rules:
       title: basic.title, authors: basic.authors, year: basic.year,
       journal: basic.journal, abstract: basic.abstract || '',
       researchTopic: '', coreConcepts: [], extractionTheories: [],
-      extractionVariables: [], relationships: [], evidence: []
+      extractionVariables: [], relationships: [], evidence: [], _truncated: basic._truncated
     };
   }
   const structured = JSON.parse(extMatch[0]);
