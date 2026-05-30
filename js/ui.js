@@ -377,23 +377,30 @@ function showPaperDetailModal(paper) {
     theoryHtml = '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:10px">&#127979; 理论基础：' + escapeHtml(paper.theory) + '</div>';
   }
 
+  // Truncation warning
+  var absEnd = (paper.abstract||'').trim().slice(-1);
+  var mayBeTruncated = paper.abstract && paper.abstract.length > 1500 && !'。.！!？?）)'.includes(absEnd);
+  var truncWarn = mayBeTruncated ? '<div style="font-size:11px;color:#e67e22;background:#fef9e7;border:1px solid #f9e79f;border-radius:4px;padding:6px 12px;margin-bottom:12px">&#9888; 摘要可能不完整（原文过长导致AI输出被截断），建议手动修正</div>' : '';
+
   overlay.innerHTML =
     '<div class="term-modal" style="width:960px;padding:32px 36px;max-height:92vh">' +
-    // Title row
+    // Truncation warning
+    truncWarn +
+    // Title row (editable)
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">' +
-    '<div style="font-size:20px;font-weight:700;color:var(--text);line-height:1.4;flex:1;padding-right:20px">' + escapeHtml(paper.title) + '</div>' +
-    (paper.year ? '<span style="font-size:24px;font-weight:700;color:var(--accent);flex-shrink:0">' + paper.year + '</span>' : '') +
+    '<div id="basic-title" class="ext-editable" style="font-size:20px;font-weight:700;color:var(--text);line-height:1.4;flex:1;padding-right:20px;border:1px solid transparent;border-radius:4px;padding:4px 6px;transition:border-color 0.15s;min-height:28px">' + escapeHtml(paper.title) + '</div>' +
+    '<span id="basic-year" class="ext-editable" style="font-size:24px;font-weight:700;color:var(--accent);flex-shrink:0;border:1px solid transparent;border-radius:4px;padding:4px 6px;min-width:60px;text-align:right;transition:border-color 0.15s">' + (paper.year || '') + '</span>' +
     '</div>' +
-    // Authors + Journal
+    // Authors + Journal (editable)
     '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--text-tertiary)">' +
-    '<span>&#128100; ' + escapeHtml(paper.authors||'—') + '</span>' +
-    '<span>&#128211; ' + escapeHtml(paper.journal||'—') + '</span>' +
+    '<span id="basic-authors" class="ext-editable" style="border:1px solid transparent;border-radius:4px;padding:2px 6px;transition:border-color 0.15s;min-width:40px">&#128100; ' + escapeHtml(paper.authors||'—') + '</span>' +
+    '<span id="basic-journal" class="ext-editable" style="border:1px solid transparent;border-radius:4px;padding:2px 6px;transition:border-color 0.15s;min-width:40px">&#128211; ' + escapeHtml(paper.journal||'—') + '</span>' +
     '</div>' +
     tagsHtml +
     theoryHtml +
-    // Abstract
-    '<div style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:20px;max-height:180px;overflow-y:auto;padding:14px 18px;background:#f8f9fb;border-radius:6px;border:1px solid #e8ecf0">' +
-    escapeHtml(paper.abstract||'暂无摘要') +
+    // Abstract (editable)
+    '<div id="basic-abstract" class="ext-editable" style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:20px;max-height:180px;overflow-y:auto;padding:14px 18px;background:#f8f9fb;border-radius:6px;border:1px solid #e8ecf0;transition:border-color 0.15s">' +
+    escapeHtml(paper.abstract||'点击添加摘要') +
     '</div>' +
     // Structured extraction
     buildExtraction() +
@@ -548,6 +555,40 @@ function showPaperDetailModal(paper) {
     });
     container.appendChild(add);
   }
+
+  // Make basic fields editable
+  [{ id: 'basic-title', field: 'title', tag: 'input' },
+   { id: 'basic-authors', field: 'authors', tag: 'input' },
+   { id: 'basic-journal', field: 'journal', tag: 'input' },
+   { id: 'basic-year', field: 'year', tag: 'input' },
+   { id: 'basic-abstract', field: 'abstract', tag: 'textarea' }
+  ].forEach(function(f) {
+    var el = overlay.querySelector('#' + f.id);
+    if (!el) return;
+    el.addEventListener('mouseenter', function() { this.style.borderColor = 'var(--border)'; this.style.cursor = 'text'; });
+    el.addEventListener('mouseleave', function() { this.style.borderColor = 'transparent'; });
+    el.addEventListener('click', function() {
+      var cur = paper[f.field] || '';
+      var cls = 'width:100%;border:none;outline:none;font-size:inherit;font-family:inherit;background:transparent;padding:0;color:inherit;line-height:inherit';
+      if (f.tag === 'textarea') cls += ';resize:vertical;min-height:80px';
+      el.innerHTML = '<' + f.tag + ' style="' + cls + '">' + escapeHtml(String(cur)) + '</' + f.tag + '>';
+      var inp = el.querySelector(f.tag);
+      inp.focus();
+      if (f.tag === 'input') inp.select();
+      function done() {
+        var v = inp.value.trim();
+        var update = {}; update[f.field] = f.field === 'year' ? (parseInt(v) || null) : v;
+        paper[f.field] = update[f.field];
+        db.updatePaper(paper.id, update);
+        el.textContent = v || (f.id === 'basic-abstract' ? '点击添加摘要' : '');
+        if (f.id === 'basic-authors') el.textContent = '👤 ' + (v || '—');
+        if (f.id === 'basic-journal') el.textContent = '📑 ' + (v || '—');
+        el.style.cursor = 'pointer';
+      }
+      inp.addEventListener('blur', done);
+      inp.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey && f.tag === 'input') inp.blur(); });
+    });
+  });
 
   function buildEditors() {
     // Research Topic
