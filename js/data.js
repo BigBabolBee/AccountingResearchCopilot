@@ -478,20 +478,22 @@ async function searchSemanticScholar(query) {
 async function extractPaperMetadata(pdfText, config) {
   const textSample = pdfText.slice(0, 4000);
 
-  // Phase 1: basic metadata (title, authors, year, journal) — abstract from raw text
+  // Phase 1: basic metadata (title, authors, year, journal, abstract)
   const metaPrompt = `Extract metadata from this academic paper text. Return ONLY valid JSON:
 
 {
   "title": "the paper title exactly as written",
   "authors": "author names separated by commas",
   "year": 2024,
-  "journal": "journal or conference name"
+  "journal": "journal or conference name",
+  "abstract": "the abstract text"
 }
 
 Rules:
 - title is ALWAYS required
 - If you cannot find a field, use empty string ""
 - year must be a number or 0 if not found
+- abstract: limit to 300 Chinese characters or 500 English words max
 - Only return JSON, no other text`;
 
   const metaResp = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -505,7 +507,7 @@ Rules:
       ],
       enable_thinking: false,
       temperature: 0.1,
-      max_tokens: 2000
+      max_tokens: 8000
     })
   });
 
@@ -538,26 +540,6 @@ Rules:
     }
   }
 
-  // Extract abstract from raw PDF text by scoring paragraphs for academic keywords
-  var abstract = '';
-  var keywords = ['本文', '研究', '发现', '结果表明', '分析', '影响', '作用', '机制', '结论', '表明', '基于', '利用', '使用', '进行'];
-  var paragraphs = textSample.split(/\n{2,}/).filter(function(p) { return p.trim().length > 80; });
-  if (paragraphs.length > 0) {
-    var bestPara = paragraphs[0];
-    var bestScore = 0;
-    // Skip the first paragraph if it's very short (probably title block)
-    var start = paragraphs.length > 1 && paragraphs[0].trim().length < 200 ? 1 : 0;
-    for (var i = start; i < Math.min(paragraphs.length, 8); i++) {
-      var p = paragraphs[i].trim();
-      var score = 0;
-      keywords.forEach(function(k) { if (p.indexOf(k) !== -1) score += 1; });
-      // Bonus for paragraph length (100-1500 chars is ideal for an abstract)
-      var len = p.length;
-      if (len > 100 && len < 3000) score += 2;
-      if (score > bestScore) { bestScore = score; bestPara = p; }
-    }
-    abstract = bestPara.replace(/\s+/g, ' ').trim().slice(0, 3000);
-  }
 
   // Phase 2: structured extraction using the "提取器" prompt
   const extractorPrompt = config.prompts?.['提取器']
@@ -569,7 +551,7 @@ Rules:
     body: JSON.stringify({
       model: config.model,
       messages: [
-        { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + basic.title + '\nabstract: ' + abstract }
+        { role: 'user', content: extractorPrompt + '\n\n---\n\npaper title: ' + basic.title + '\nabstract: ' + (basic.abstract || '') }
       ],
       enable_thinking: false,
       temperature: 0.1,
@@ -581,7 +563,7 @@ Rules:
     // If extraction fails, return basic metadata with empty structured fields
     return {
       title: basic.title, authors: basic.authors, year: basic.year,
-      journal: basic.journal, abstract: abstract,
+      journal: basic.journal, abstract: basic.abstract || '',
       researchTopic: '', coreConcepts: [], extractionTheories: [],
       extractionVariables: [], relationships: [], evidence: []
     };
@@ -598,7 +580,7 @@ Rules:
   if (!extMatch) {
     return {
       title: basic.title, authors: basic.authors, year: basic.year,
-      journal: basic.journal, abstract: abstract,
+      journal: basic.journal, abstract: basic.abstract || '',
       researchTopic: '', coreConcepts: [], extractionTheories: [],
       extractionVariables: [], relationships: [], evidence: []
     };
