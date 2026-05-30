@@ -538,13 +538,26 @@ Rules:
     }
   }
 
-  // Extract abstract from raw PDF text (AI doesn't return it, to save tokens)
+  // Extract abstract from raw PDF text by scoring paragraphs for academic keywords
   var abstract = '';
-  var lines = textSample.split(/\n+/).filter(function(l) { return l.trim().length > 60; });
-  if (lines.length > 2) {
-    abstract = lines.slice(1).reduce(function(a, b) { return b.length > a.length ? b : a; }, lines[1] || '');
+  var keywords = ['本文', '研究', '发现', '结果表明', '分析', '影响', '作用', '机制', '结论', '表明', '基于', '利用', '使用', '进行'];
+  var paragraphs = textSample.split(/\n{2,}/).filter(function(p) { return p.trim().length > 80; });
+  if (paragraphs.length > 0) {
+    var bestPara = paragraphs[0];
+    var bestScore = 0;
+    // Skip the first paragraph if it's very short (probably title block)
+    var start = paragraphs.length > 1 && paragraphs[0].trim().length < 200 ? 1 : 0;
+    for (var i = start; i < Math.min(paragraphs.length, 8); i++) {
+      var p = paragraphs[i].trim();
+      var score = 0;
+      keywords.forEach(function(k) { if (p.indexOf(k) !== -1) score += 1; });
+      // Bonus for paragraph length (100-1500 chars is ideal for an abstract)
+      var len = p.length;
+      if (len > 100 && len < 3000) score += 2;
+      if (score > bestScore) { bestScore = score; bestPara = p; }
+    }
+    abstract = bestPara.replace(/\s+/g, ' ').trim().slice(0, 3000);
   }
-  abstract = abstract.replace(/\s+/g, ' ').trim().slice(0, 3000);
 
   // Phase 2: structured extraction using the "提取器" prompt
   const extractorPrompt = config.prompts?.['提取器']
