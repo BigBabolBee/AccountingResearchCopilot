@@ -752,6 +752,7 @@ function showPaperDetailModal(paper) {
     el.addEventListener('mouseenter', function() { this.style.borderColor = 'var(--border)'; this.style.cursor = 'text'; });
     el.addEventListener('mouseleave', function() { this.style.borderColor = 'transparent'; });
     el.addEventListener('click', function() {
+      if (el.querySelector('input, textarea')) return; // already editing
       var cur = paper[f.field] || '';
       var cls = 'width:100%;border:none;outline:none;font-size:inherit;font-family:inherit;background:transparent;padding:0;color:inherit;line-height:inherit';
       if (f.tag === 'textarea') cls += ';resize:vertical;min-height:80px';
@@ -785,6 +786,7 @@ function showPaperDetailModal(paper) {
       tEl.addEventListener('mouseenter', function() { tEl.style.borderColor = 'var(--border)'; tEl.style.cursor = 'text'; });
       tEl.addEventListener('mouseleave', function() { tEl.style.borderColor = 'transparent'; });
       tEl.addEventListener('click', function() {
+        if (tEl.querySelector('input')) return;
         var cur = paper.researchTopic || '';
         tEl.innerHTML = '<input type="text" value="' + escapeHtml(cur).replace(/"/g,'&quot;') + '" style="width:100%;border:none;outline:none;font-size:13px;font-family:var(--font);background:transparent;padding:0">';
         var inp = tEl.querySelector('input');
