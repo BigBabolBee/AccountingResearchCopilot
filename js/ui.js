@@ -210,10 +210,6 @@ function renderExtractionStats(panel, topic) {
   }
   html += '</div>';
 
-  // 6. Evidence
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128220; Evidence</div>';
-  html += '<div style="font-size:13px;color:var(--text)">' + stats.evidenceCount + ' 条证据</div></div>';
-
   panel.innerHTML = html;
 }
 
@@ -1627,11 +1623,4 @@ function initUI() {
   if (topics.length > 0) selectedTopicId = topics[0].id;
   renderSidebar();
   renderCenter(getSelectedTopic());
-  // Collapse right panel by default
-  var rp = document.getElementById('rightPanel');
-  var rt = document.getElementById('rightPanelToggle');
-  if (rp && !rp.classList.contains('collapsed')) {
-    rp.classList.add('collapsed');
-    if (rt) { rt.classList.add('collapsed'); rt.innerHTML = '&#9654;'; rt.title = '展开右侧栏'; }
-  }
 }
