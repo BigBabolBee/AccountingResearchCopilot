@@ -123,14 +123,98 @@ function renderCenter(topic) {
 function renderRightPanel(topic) {
   const panel = document.getElementById('rightPanelContent');
   if (!panel) return;
-  const tid = topic ? topic.id : null;
-  const allTerms = tid ? getTermExpansions(tid) : [];
+  if (!topic) { panel.innerHTML = '<div class="right-panel-empty">请选择一个研究主题</div>'; return; }
+  renderExtractionStats(panel, topic);
+}
 
-  if (rightPanelMode === 'list' || !rightPanelTerm) {
-    renderTermList(panel, topic, allTerms);
-  } else {
-    renderTermDetail(panel, topic, allTerms);
+function renderExtractionStats(panel, topic) {
+  var tid = topic.id;
+  var papers = getPapers(tid);
+
+  // Aggregate stats
+  var stats = {
+    researchTopics: 0,
+    concepts: {}, theories: {}, variables: {}, varRoles: {},
+    relationships: [], relationTypes: {}, evidenceCount: 0
+  };
+
+  papers.forEach(function(p) {
+    if (p.researchTopic) stats.researchTopics++;
+    (p.coreConcepts || []).forEach(function(c) { stats.concepts[c] = (stats.concepts[c] || 0) + 1; });
+    (p.extractionTheories || []).forEach(function(t) { stats.theories[t] = (stats.theories[t] || 0) + 1; });
+    (p.extractionVariables || []).forEach(function(v) {
+      var key = v.variable_name; stats.variables[key] = (stats.variables[key] || 0) + 1;
+      var role = v.variable_role || '未知'; stats.varRoles[role] = (stats.varRoles[role] || 0) + 1;
+    });
+    (p.relationships || []).forEach(function(r) {
+      stats.relationships.push(r);
+      stats.relationTypes[r.relation] = (stats.relationTypes[r.relation] || 0) + 1;
+    });
+    stats.evidenceCount += (p.evidence || []).length;
+  });
+
+  function topKeys(obj, limit) {
+    return Object.keys(obj).sort(function(a, b) { return obj[b] - obj[a]; }).slice(0, limit || 10);
   }
+
+  function countBadge(n) { return '<span style="font-size:10px;background:var(--bg);color:var(--text-tertiary);padding:1px 6px;border-radius:8px;margin-left:4px">' + n + '</span>'; }
+
+  var html = '<div class="right-panel-header"><div class="right-panel-subtitle">提取统计</div></div>';
+
+  // 1. Research Topics
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#127891; Research Topics</div>';
+  html += '<div style="font-size:13px;color:var(--text);padding:4px 0">' + stats.researchTopics + ' / ' + papers.length + ' 篇文献</div></div>';
+
+  // 2. Core Concepts
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128218; Core Concepts</div>';
+  var topConcepts = topKeys(stats.concepts, 8);
+  if (topConcepts.length) {
+    html += '<div class="term-tags">';
+    topConcepts.forEach(function(c) { html += '<span class="term-tag tag-syn">' + escapeHtml(c) + countBadge(stats.concepts[c]) + '</span>'; });
+    html += '</div>';
+  } else { html += '<div class="right-panel-empty">暂无</div>'; }
+  html += '</div>';
+
+  // 3. Theories
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#127758; Theories</div>';
+  var topTheories = topKeys(stats.theories, 6);
+  if (topTheories.length) {
+    html += '<div class="term-tags">';
+    topTheories.forEach(function(t) { html += '<span class="term-tag tag-cluster">' + escapeHtml(t) + countBadge(stats.theories[t]) + '</span>'; });
+    html += '</div>';
+  } else { html += '<div class="right-panel-empty">暂无</div>'; }
+  html += '</div>';
+
+  // 4. Variables
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128200; Variables</div>';
+  var topVars = topKeys(stats.variables, 8);
+  if (topVars.length) {
+    html += '<div class="term-tags">';
+    topVars.forEach(function(v) { html += '<span class="term-tag tag-syn">' + escapeHtml(v) + countBadge(stats.variables[v]) + '</span>'; });
+    html += '</div>';
+  } else { html += '<div class="right-panel-empty">暂无</div>'; }
+  // Role distribution
+  html += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">';
+  var roleKeys = topKeys(stats.varRoles, 6);
+  roleKeys.forEach(function(r) { html += '<span style="margin-right:8px">' + escapeHtml(r) + ' ' + stats.varRoles[r] + '</span>'; });
+  html += '</div></div>';
+
+  // 5. Relationships
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128279; Relationships</div>';
+  html += '<div style="font-size:11px;color:var(--text-secondary)">共 ' + stats.relationships.length + ' 条关系</div>';
+  var relTypes = topKeys(stats.relationTypes, 6);
+  if (relTypes.length) {
+    html += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">';
+    relTypes.forEach(function(r) { html += '<span style="margin-right:8px">' + escapeHtml(r) + ' ' + stats.relationTypes[r] + '</span>'; });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // 6. Evidence
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128220; Evidence</div>';
+  html += '<div style="font-size:13px;color:var(--text)">' + stats.evidenceCount + ' 条证据</div></div>';
+
+  panel.innerHTML = html;
 }
 
 function renderTermList(panel, topic, allTerms) {
