@@ -294,7 +294,7 @@ function renderPapers(papersList) {
     }
     var isError = p.title && p.title.indexOf('❌') === 0;
     var extracting = activeExtractions[p.id];
-    var extractTag = extracting ? '<span style="font-size:10px;background:#e8f6f2;color:#2d7d6f;padding:2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:3px"><span class="ai-modal-spinner" style="display:inline-block;width:10px;height:10px;border-width:2px;margin:0"></span>AI提取中</span>' : '';
+    var extractTag = extracting ? '<span class="extract-status-tag" style="font-size:10px;background:#e8f6f2;color:#2d7d6f;padding:2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:3px"><span class="ai-modal-spinner" style="display:inline-block;width:10px;height:10px;border-width:2px;margin:0"></span>AI提取中</span>' : '';
     return '<div class="paper-card' + (isError ? ' error' : '') + '" data-id="' + p.id + '" style="' + (isError ? 'border-color:#e74c3c' : '') + '">' +
       '<div class="paper-card-header">' +
       '<div class="paper-title">' + p.title + '</div>' +
@@ -471,8 +471,17 @@ function showPaperDetailModal(paper) {
           });
           Object.assign(paper, s);
           delete activeExtractions[paper.id];
-          // Refresh card list (removes "AI提取中" tag)
-          renderCenter(getSelectedTopic());
+          // Update the card's "AI提取中" tag directly (don't disrupt current view)
+          var card = document.querySelector('.paper-card[data-id="' + paper.id + '"]');
+          if (card) {
+            var tag = card.querySelector('.extract-status-tag');
+            if (tag) tag.remove();
+            // Update abstract in card to show new research_topic
+            var abs = card.querySelector('.paper-abstract');
+            if (abs && paper.researchTopic) abs.textContent = paper.abstract || '';
+            var title = card.querySelector('.paper-title');
+            if (title && paper.researchTopic) title.textContent = paper.title || '';
+          }
           // If modal still open, refresh it
           if (document.body.contains(overlay) && overlay.querySelector('#detailClose')) {
             overlay.remove();
@@ -480,7 +489,8 @@ function showPaperDetailModal(paper) {
           }
         } catch (e) {
           delete activeExtractions[paper.id];
-          renderCenter(getSelectedTopic());
+          var card2 = document.querySelector('.paper-card[data-id="' + paper.id + '"]');
+          if (card2) { var tag2 = card2.querySelector('.extract-status-tag'); if (tag2) tag2.remove(); }
           if (document.body.contains(overlay)) {
             extractBtn.disabled = false;
             extractBtn.textContent = '提取';
