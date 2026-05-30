@@ -53,19 +53,14 @@ var promptsCache = {};
 // Init data — called after auth is confirmed
 async function initData() {
   await db.loadAll();
-  // Load prompts from DB, seed with defaults if empty
+  // Seed DB prompts from DEFAULT_PROMPTS (overwrite old versions)
   try {
-    promptsCache = await db.loadPrompts();
-    if (!promptsCache || Object.keys(promptsCache).length === 0) {
-      // First time: seed prompts to DB
-      for (var k in DEFAULT_PROMPTS) {
-        await db.savePrompt(k, DEFAULT_PROMPTS[k]);
-      }
-      promptsCache = Object.assign({}, DEFAULT_PROMPTS);
+    for (var k in DEFAULT_PROMPTS) {
+      await db.savePrompt(k, DEFAULT_PROMPTS[k]);
     }
-  } catch (e) {
-    console.error('loadPrompts error, using defaults:', e);
     promptsCache = Object.assign({}, DEFAULT_PROMPTS);
+  } catch (e) {
+    console.error('seedPrompts error:', e);
   }
   if (topics.length === 0) {
     await seedDefaultData();
@@ -568,7 +563,7 @@ async function extractPaperMetadata(pdfText, config) {
   basic._truncated = wasTruncated;
 
   // Phase 2: structured extraction using the "提取器" prompt
-  const extractorPrompt = config.prompts?.['提取器'] || DEFAULT_PROMPTS['提取器'];
+  const extractorPrompt = DEFAULT_PROMPTS['提取器'];
 
   const extractorResp = await fetch(config.baseUrl + '/chat/completions', {
     method: 'POST',
@@ -645,9 +640,8 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  var sysPrompt = (config.prompts && config.prompts['提取器']) || promptsCache['提取器'] || DEFAULT_PROMPTS['提取器'];
-
-  console.log('extractPaperStructured model:', config.model);
+  var sysPrompt = DEFAULT_PROMPTS['提取器'];
+  console.log('extractPaperStructured model:', config.model, 'promptKeys:', Object.keys(DEFAULT_PROMPTS));
 
   var resp = await fetch(config.baseUrl + '/chat/completions', {
     method: 'POST',
