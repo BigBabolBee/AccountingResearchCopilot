@@ -148,7 +148,7 @@ function renderExtractionStats(panel, topic) {
   var tagBase = 'display:inline-block;font-size:11px;padding:3px 8px;border-radius:4px;margin:0 4px 4px 0';
   var badge = 'font-size:10px;margin-left:3px;opacity:0.55';
 
-  var html = '<div class="right-panel-header"><div class="right-panel-subtitle">提取统计</div></div>';
+  var html = '<div class="right-panel-header"><div class="right-panel-topic">' + escapeHtml(topic.name) + '</div><div class="right-panel-subtitle">提取统计</div></div>';
 
   // 1. 研究主题
   html += '<div class="right-panel-section" style="margin-bottom:10px">';
