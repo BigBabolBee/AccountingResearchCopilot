@@ -134,14 +134,14 @@ const DEFAULT_PROMPTS = {
 * variable_name
 * variable_role
 
-允许的角色：
+允许的角色（只能使用以下中文值）：
 
-* dependent_variable（因变量）
-* independent_variable（自变量）
-* moderator（调节变量）
-* mediator（中介变量）
-* control_variable（控制变量）
-* unknown（未知）
+* 因变量
+* 自变量
+* 调节变量
+* 中介变量
+* 控制变量
+* 未知
 
 5. relationships
    明确研究的研究关系。
@@ -149,16 +149,16 @@ const DEFAULT_PROMPTS = {
 每个关系必须包含：
 
 * subject（主体）
-* relation（关系）
+* relation（关系，只能使用以下中文值）
 * object（客体）
 
 允许的关系：
 
-* affects（影响）
-* moderates（调节）
-* mediates（中介）
-* correlates_with（相关）
-* investigates（研究）
+* 影响
+* 调节
+* 中介
+* 相关
+* 研究
 
 6. evidence
    摘要中支持提取内容的原始句子或短语。
