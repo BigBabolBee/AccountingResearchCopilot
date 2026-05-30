@@ -139,8 +139,8 @@ const db = (() => {
     });
   }
   async function deletePaper(paperId) {
+    await remove('papers', paperId);
     papers = papers.filter(p => p.id !== paperId);
-    try { await remove('papers', paperId); } catch (e) { console.error('deletePaper db error:', e); }
   }
 
   // ── Theories ──
@@ -151,8 +151,8 @@ const db = (() => {
     return id;
   }
   async function deleteTheory(theoryId) {
+    await remove('theories', theoryId);
     theories = theories.filter(t => t.id !== theoryId);
-    try { await remove('theories', theoryId); } catch (e) { console.error(e); }
   }
 
   // ── Variables ──
@@ -163,8 +163,8 @@ const db = (() => {
     return id;
   }
   async function deleteVariable(variableId) {
+    await remove('variables', variableId);
     variables = variables.filter(v => v.id !== variableId);
-    try { await remove('variables', variableId); } catch (e) { console.error(e); }
   }
 
   // ── Methods ──
@@ -175,8 +175,8 @@ const db = (() => {
     return id;
   }
   async function deleteMethod(methodId) {
+    await remove('methods', methodId);
     methods = methods.filter(m => m.id !== methodId);
-    try { await remove('methods', methodId); } catch (e) { console.error(e); }
   }
 
   // ── Structures ──
@@ -187,8 +187,8 @@ const db = (() => {
     return id;
   }
   async function deleteStructure(structureId) {
+    await remove('structures', structureId);
     structures = structures.filter(s => s.id !== structureId);
-    try { await remove('structures', structureId); } catch (e) { console.error(e); }
   }
 
   // ── Term Expansions ──
@@ -199,8 +199,8 @@ const db = (() => {
     return id;
   }
   async function deleteTermExpansion(termId) {
+    await remove('term_expansions', termId);
     termExpansions = termExpansions.filter(t => t.id !== termId);
-    try { await remove('term_expansions', termId); } catch (e) { console.error(e); }
   }
 
   // ── Topic Members (Sharing) ──

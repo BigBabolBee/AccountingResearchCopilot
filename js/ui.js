@@ -321,8 +321,12 @@ function renderPapers(papersList) {
       e.stopPropagation();
       const id = this.dataset.id;
       if (!confirm('确定要删除这篇文献吗？')) return;
-      await db.deletePaper(id);
-      renderCenter(getSelectedTopic());
+      try {
+        await db.deletePaper(id);
+        renderCenter(getSelectedTopic());
+      } catch (err) {
+        alert('删除失败：' + (err.message || '网络错误，请稍后重试'));
+      }
     });
   });
 
