@@ -1453,4 +1453,11 @@ function initUI() {
   if (topics.length > 0) selectedTopicId = topics[0].id;
   renderSidebar();
   renderCenter(getSelectedTopic());
+  // Collapse right panel by default
+  var rp = document.getElementById('rightPanel');
+  var rt = document.getElementById('rightPanelToggle');
+  if (rp && !rp.classList.contains('collapsed')) {
+    rp.classList.add('collapsed');
+    if (rt) { rt.classList.add('collapsed'); rt.innerHTML = '&#9654;'; rt.title = '展开右侧栏'; }
+  }
 }
