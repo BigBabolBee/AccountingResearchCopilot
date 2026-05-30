@@ -665,12 +665,29 @@ async function extractPaperStructured(paper, config) {
 
   var d = await resp.json();
   var content = d.choices?.[0]?.message?.content || '';
-  console.log('extractPaperStructured content:', content.slice(0, 300));
+  console.log('extractPaperStructured raw:', content.slice(0, 300));
   var match = content.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('AI 返回格式异常');
 
-  var structured = JSON.parse(match[0]);
-  console.log('extractPaperStructured parsed:', JSON.stringify(structured).slice(0, 500));
+  // Same recovery logic as Phase 1
+  var jsonStr = match[0];
+  if (!jsonStr.endsWith('}')) {
+    var lastBrace = jsonStr.lastIndexOf('}');
+    if (lastBrace > jsonStr.length / 2) { jsonStr = jsonStr.slice(0, lastBrace + 1); }
+  }
+  var structured;
+  try {
+    structured = JSON.parse(jsonStr);
+  } catch (e1) {
+    var fixed = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*\]/g, ']');
+    try {
+      structured = JSON.parse(fixed);
+    } catch (e2) {
+      console.error('extractPaperStructured JSON error:', e2.message, 'tail:', jsonStr.slice(-200));
+      throw new Error('AI 返回 JSON 不完整，请重试提取');
+    }
+  }
+  console.log('extractPaperStructured parsed');
   return {
     researchTopic: structured.research_topic || '',
     coreConcepts: structured.core_concepts || [],
