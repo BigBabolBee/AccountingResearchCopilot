@@ -479,22 +479,22 @@ async function extractPaperMetadata(pdfText, config) {
   const textSample = pdfText.slice(0, 4000);
 
   // Phase 1: basic metadata (title, authors, year, journal, abstract)
-  const metaPrompt = `Extract metadata from this academic paper text. Return ONLY valid JSON:
+  const metaPrompt = `从以下学术论文文本中提取元数据。只返回JSON：
 
 {
-  "title": "the paper title exactly as written",
-  "authors": "author names separated by commas",
+  "title": "论文标题，保持原文语言，不要翻译",
+  "authors": "作者姓名，用逗号分隔",
   "year": 2024,
-  "journal": "journal or conference name",
-  "abstract": "the abstract text"
+  "journal": "期刊名称，保持原文语言",
+  "abstract": "摘要全文，保持原文语言，不要截断"
 }
 
-Rules:
-- title is ALWAYS required
-- If you cannot find a field, use empty string ""
-- year must be a number or 0 if not found
-- abstract: include the FULL abstract text, do not truncate
-- Only return JSON, no other text`;
+规则：
+- title 必须提取，保持原文语言不变
+- 找不到的字段填空字符串""
+- year 必须是数字，无法确定填 0
+- abstract 输出完整摘要原文，不要截断
+- 只返回JSON，不要其他文字`;
 
   const metaResp = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
