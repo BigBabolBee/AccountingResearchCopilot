@@ -506,29 +506,35 @@ Rules:
       ],
       enable_thinking: false,
       temperature: 0.1,
-      max_tokens: 1000
+      max_tokens: 2000
     })
   });
 
   if (!metaResp.ok) {
     const text = await metaResp.text();
-    throw new Error(`AI API 错误 (${metaResp.status})`);
+    throw new Error('AI API 错误 (' + metaResp.status + ')');
   }
 
   const metaData = await metaResp.json();
   const metaContent = metaData.choices?.[0]?.message?.content || '{}';
   console.log('extractPaperMetadata raw:', metaContent.slice(0, 300));
-  const metaMatch = metaContent.match(/\{[\s\S]*\}/);
+  var metaMatch = metaContent.match(/\{[\s\S]*\}/);
   if (!metaMatch) throw new Error('AI 返回格式异常（基本元数据）');
   var basic;
+  var jsonStr = metaMatch[0];
+  // Try to fix truncated JSON (missing closing braces)
+  if (!jsonStr.endsWith('}')) {
+    var lastBrace = jsonStr.lastIndexOf('}');
+    if (lastBrace > jsonStr.length / 2) { jsonStr = jsonStr.slice(0, lastBrace + 1); }
+  }
   try {
-    basic = JSON.parse(metaMatch[0]);
+    basic = JSON.parse(jsonStr);
   } catch (jsonErr) {
-    // Try to fix common JSON issues: trailing commas, unquoted values
-    var fixed = metaMatch[0].replace(/,\s*}/g, '}').replace(/,\s*\]/g, ']');
+    var fixed = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*\]/g, ']');
     try {
       basic = JSON.parse(fixed);
     } catch (e2) {
+      console.error('JSON parse error:', jsonErr.message, 'raw:', jsonStr.slice(-200));
       throw new Error('AI 返回的 JSON 格式有误，请重试');
     }
   }
