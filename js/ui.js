@@ -131,70 +131,78 @@ function renderExtractionStats(panel, topic) {
   var tid = topic.id;
   var papers = getPapers(tid);
   var cached = topicStatsCache[tid];
+  var stats = cached || { concepts: {}, theories: {}, varByRole: {}, relationDetails: {} };
+  var researchTopics = 0;
+  var allRelations = [];
 
-  // Use cached stats or compute fresh
-  var stats = cached || { concepts: {}, theories: {}, variables: {}, varRoles: {}, relationTypes: {} };
-  var researchTopics = 0, relCount = 0;
   papers.forEach(function(p) {
     if (p.researchTopic) researchTopics++;
-    relCount += (p.relationships || []).length;
+    (p.relationships || []).forEach(function(r) { allRelations.push(r); });
   });
-
-  function topKeys(obj, limit) {
-    return Object.keys(obj).sort(function(a, b) { return obj[b] - obj[a]; }).slice(0, limit || 10);
-  }
 
   function countBadge(n) { return '<span style="font-size:10px;background:var(--bg);color:var(--text-tertiary);padding:1px 6px;border-radius:8px;margin-left:4px">' + n + '</span>'; }
 
   var html = '<div class="right-panel-header"><div class="right-panel-subtitle">提取统计</div></div>';
 
-  // 1. Research Topics
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#127891; Research Topics</div>';
+  // 1. 研究主题
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#127891; 研究主题</div>';
   html += '<div style="font-size:13px;color:var(--text);padding:4px 0">' + researchTopics + ' / ' + papers.length + ' 篇文献</div></div>';
 
-  // 2. Core Concepts
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128218; Core Concepts</div>';
-  var topConcepts = topKeys(stats.concepts, 8);
-  if (topConcepts.length) {
+  // 2. 核心概念
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#128218; 核心概念</div>';
+  var concepts = Object.keys(stats.concepts || {}).sort(function(a,b){ return (stats.concepts[b]||0) - (stats.concepts[a]||0); }).slice(0, 10);
+  if (concepts.length) {
     html += '<div class="term-tags">';
-    topConcepts.forEach(function(c) { html += '<span class="term-tag tag-syn">' + escapeHtml(c) + countBadge(stats.concepts[c]) + '</span>'; });
+    concepts.forEach(function(c) { html += '<span class="term-tag tag-syn">' + escapeHtml(c) + countBadge(stats.concepts[c]) + '</span>'; });
     html += '</div>';
   } else { html += '<div class="right-panel-empty">暂无</div>'; }
   html += '</div>';
 
-  // 3. Theories
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#127758; Theories</div>';
-  var topTheories = topKeys(stats.theories, 6);
-  if (topTheories.length) {
+  // 3. 理论基础
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#127758; 理论基础</div>';
+  var theories = Object.keys(stats.theories || {}).sort(function(a,b){ return (stats.theories[b]||0) - (stats.theories[a]||0); }).slice(0, 8);
+  if (theories.length) {
     html += '<div class="term-tags">';
-    topTheories.forEach(function(t) { html += '<span class="term-tag tag-cluster">' + escapeHtml(t) + countBadge(stats.theories[t]) + '</span>'; });
+    theories.forEach(function(t) { html += '<span class="term-tag tag-cluster">' + escapeHtml(t) + countBadge(stats.theories[t]) + '</span>'; });
     html += '</div>';
   } else { html += '<div class="right-panel-empty">暂无</div>'; }
   html += '</div>';
 
-  // 4. Variables
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128200; Variables</div>';
-  var topVars = topKeys(stats.variables, 8);
-  if (topVars.length) {
-    html += '<div class="term-tags">';
-    topVars.forEach(function(v) { html += '<span class="term-tag tag-syn">' + escapeHtml(v) + countBadge(stats.variables[v]) + '</span>'; });
-    html += '</div>';
+  // 4. 变量（嵌套：角色 → 变量名列表）
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#128200; 变量</div>';
+  var vbr = stats.varByRole || {};
+  var roles = Object.keys(vbr).sort(function(a,b){ return (vbr[b]||{}).__count - (vbr[a]||{}).__count; });
+  if (roles.length) {
+    roles.forEach(function(role) {
+      var vdata = vbr[role];
+      html += '<div style="margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-bottom:2px">' + escapeHtml(role) + ' (' + (vdata.__count || 0) + ')</div>';
+      html += '<div class="term-tags">';
+      Object.keys(vdata).filter(function(k){ return k !== '__count'; }).sort(function(a,b){ return vdata[b] - vdata[a]; }).slice(0, 6).forEach(function(v){
+        html += '<span class="term-tag tag-syn" style="font-size:10px;padding:2px 6px">' + escapeHtml(v) + countBadge(vdata[v]) + '</span>';
+      });
+      html += '</div></div>';
+    });
   } else { html += '<div class="right-panel-empty">暂无</div>'; }
-  // Role distribution
-  html += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">';
-  var roleKeys = topKeys(stats.varRoles, 6);
-  roleKeys.forEach(function(r) { html += '<span style="margin-right:8px">' + escapeHtml(r) + ' ' + stats.varRoles[r] + '</span>'; });
-  html += '</div></div>';
+  html += '</div>';
 
-  // 5. Relationships
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128279; Relationships</div>';
-  html += '<div style="font-size:11px;color:var(--text-secondary)">共 ' + relCount + ' 条关系</div>';
-  var relTypes = topKeys(stats.relationTypes, 6);
-  if (relTypes.length) {
-    html += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">';
-    relTypes.forEach(function(r) { html += '<span style="margin-right:8px">' + escapeHtml(r) + ' ' + stats.relationTypes[r] + '</span>'; });
+  // 5. 研究关系
+  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#128279; 研究关系</div>';
+  html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px">共 ' + allRelations.length + ' 条</div>';
+  // Group by relation type
+  var relGroups = {};
+  allRelations.forEach(function(r) {
+    var rt = r.relation || '未知';
+    if (!relGroups[rt]) relGroups[rt] = [];
+    relGroups[rt].push(r);
+  });
+  Object.keys(relGroups).sort(function(a,b){ return relGroups[b].length - relGroups[a].length; }).forEach(function(rt){
+    html += '<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--text-secondary)">' + escapeHtml(rt) + ' (' + relGroups[rt].length + ')</div>';
+    relGroups[rt].slice(0, 5).forEach(function(r){
+      html += '<div style="font-size:10px;color:var(--text-tertiary);padding:1px 0 1px 6px;border-left:2px solid var(--border);margin-bottom:1px">' + escapeHtml(r.subject) + ' → ' + escapeHtml(r.object) + '</div>';
+    });
+    if (relGroups[rt].length > 5) html += '<div style="font-size:9px;color:var(--text-tertiary);padding-left:6px">...还有 ' + (relGroups[rt].length - 5) + ' 条</div>';
     html += '</div>';
-  }
+  });
   html += '</div>';
 
   panel.innerHTML = html;
@@ -203,15 +211,21 @@ function renderExtractionStats(panel, topic) {
 async function recomputeStats(topicId) {
   if (!topicId) return;
   var papers = getPapers(topicId);
-  var stats = { concepts: {}, theories: {}, variables: {}, varRoles: {}, relationTypes: {} };
+  var stats = { concepts: {}, theories: {}, varByRole: {}, relationTypes: {}, relationDetails: {} };
   papers.forEach(function(p) {
     (p.coreConcepts || []).forEach(function(c) { stats.concepts[c] = (stats.concepts[c] || 0) + 1; });
     (p.extractionTheories || []).forEach(function(t) { stats.theories[t] = (stats.theories[t] || 0) + 1; });
     (p.extractionVariables || []).forEach(function(v) {
-      stats.variables[v.variable_name] = (stats.variables[v.variable_name] || 0) + 1;
-      var role = v.variable_role || '未知'; stats.varRoles[role] = (stats.varRoles[role] || 0) + 1;
+      var role = v.variable_role || '未知';
+      if (!stats.varByRole[role]) stats.varByRole[role] = { __count: 0 };
+      stats.varByRole[role][v.variable_name] = (stats.varByRole[role][v.variable_name] || 0) + 1;
+      stats.varByRole[role].__count++;
     });
-    (p.relationships || []).forEach(function(r) { stats.relationTypes[r.relation] = (stats.relationTypes[r.relation] || 0) + 1; });
+    (p.relationships || []).forEach(function(r) {
+      stats.relationTypes[r.relation] = (stats.relationTypes[r.relation] || 0) + 1;
+      var key = r.subject + '|→|' + r.object;
+      stats.relationDetails[key] = { subject: r.subject, relation: r.relation, object: r.object };
+    });
   });
   topicStatsCache[topicId] = stats;
   try { await db.saveStats(topicId, stats); } catch(e) { console.error('saveStats error:', e); }
@@ -450,20 +464,16 @@ function showPaperDetailModal(paper) {
     var h = '<div style="border-top:1px solid var(--border);padding-top:18px;margin-top:2px">';
     // 1. Research Topic
     h += '<div style="margin-bottom:14px">';
-    h += '<div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#127891; Research Topic</div>';
+    h += '<div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#127891; 研究主题</div>';
     h += '<div id="ext-researchTopic" class="ext-editable" style="font-size:13px;color:var(--text);line-height:1.6;min-height:20px;padding:6px 10px;border:1px solid transparent;border-radius:4px;transition:border-color 0.15s">' + escapeHtml(paper.researchTopic||'点击添加研究主题') + '</div>';
     h += '</div>';
-    // 2+3. Two columns
     h += '<div style="display:flex;gap:20px;margin-bottom:14px">';
-    h += '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#128218; Core Concepts</div><div id="ext-coreConcepts" class="ext-array"></div></div>';
-    h += '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#127758; Theories</div><div id="ext-extractionTheories" class="ext-array"></div></div>';
+    h += '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#128218; 核心概念</div><div id="ext-coreConcepts" class="ext-array"></div></div>';
+    h += '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#127758; 理论基础</div><div id="ext-extractionTheories" class="ext-array"></div></div>';
     h += '</div>';
-    // 4. Variables
-    h += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#128200; Variables</div><div id="ext-extractionVariables" class="ext-array"></div></div>';
-    // 5. Relationships
-    h += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">&#128279; Research Relationships</div><div id="ext-relationships" class="ext-array"></div></div>';
-    // 6. Evidence
-    h += '<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#128220; Evidence Sentences</div><div id="ext-evidence" class="ext-array"></div></div>';
+    h += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#128200; 变量</div><div id="ext-extractionVariables" class="ext-array"></div></div>';
+    h += '<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">&#128279; 研究关系</div><div id="ext-relationships" class="ext-array"></div></div>';
+    h += '<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">&#128220; 证据句子</div><div id="ext-evidence" class="ext-array"></div></div>';
     h += '</div>';
     return h;
   }

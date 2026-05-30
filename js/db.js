@@ -285,8 +285,11 @@ const db = (() => {
       }
       Object.keys(stats.concepts || {}).forEach(function(k) { add('concept', k, stats.concepts[k]); });
       Object.keys(stats.theories || {}).forEach(function(k) { add('theory', k, stats.theories[k]); });
-      Object.keys(stats.variables || {}).forEach(function(k) { add('variable', k, stats.variables[k]); });
-      Object.keys(stats.varRoles || {}).forEach(function(k) { add('variable_role', k, stats.varRoles[k]); });
+      // Variables by role: stat_key = "自变量|ESG Score"
+      Object.keys(stats.varByRole || {}).forEach(function(role) {
+        var vd = stats.varByRole[role];
+        Object.keys(vd).filter(function(k){ return k !== '__count'; }).forEach(function(v) { add('variable', role + '|' + v, vd[v]); });
+      });
       Object.keys(stats.relationTypes || {}).forEach(function(k) { add('relation', k, stats.relationTypes[k]); });
       // Clear old stats for this topic, then insert new ones
       await supabase.from('extraction_stats').delete().eq('topic_id', topicId).neq('stat_type', '__noop__');
