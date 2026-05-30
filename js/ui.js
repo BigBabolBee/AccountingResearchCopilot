@@ -334,6 +334,12 @@ function renderPapers(papersList) {
       e.stopPropagation();
       const id = this.dataset.id;
       if (!confirm('确定要删除这篇文献吗？')) return;
+      // Placeholder cards (pdf-xxx) only exist in memory, no DB record
+      if (id && id.indexOf('pdf-') === 0) {
+        papers = papers.filter(function(p) { return p.id !== id; });
+        renderCenter(getSelectedTopic());
+        return;
+      }
       try {
         await db.deletePaper(id);
         renderCenter(getSelectedTopic());
