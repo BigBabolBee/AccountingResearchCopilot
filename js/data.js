@@ -21,30 +21,32 @@ function getTermExpansions(topicId) { return termExpansions.filter(t => t.topicI
 async function seedDefaultData() {
   const tid = await db.createTopic("ESG 如何影响成本粘性");
 
-  const paperData = [
-    { title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021. We find that better ESG performance significantly reduces cost stickiness, and this effect is more pronounced in firms with higher agency costs and weaker external monitoring.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory" },
-    { title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior. Using a difference-in-differences design around mandatory ESG disclosure regulation, we document that enhanced transparency reduces managerial empire-building incentives, thereby lowering cost stickiness.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory" },
-    { title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness, demonstrating that SG&A costs increase more when activity rises than they decrease when activity falls by an equivalent amount.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory" },
-    { title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures. We find that digital adoption increases cost flexibility and reduces stickiness, especially for labor costs.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View" },
-    { title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms. Results show that larger boards and higher board independence are associated with reduced cost stickiness.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory" },
-    { title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior. Green innovation creates specialized resources that increase cost stickiness in the short run but reduce it in the long run.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory" }
+  // Fire all inserts in parallel (6 papers + 6 theories + 6 variables + 5 methods + 7 structures)
+  var inserts = [];
+
+  var paperData = [
+    { title: "ESG Performance and Cost Stickiness: Evidence from Chinese Listed Firms", authors: "Chen, X., Wang, Y., & Li, Z.", journal: "Journal of Corporate Finance", year: 2023, abstract: "This study examines the relationship between ESG performance and cost stickiness using a sample of Chinese A-share listed firms from 2010 to 2021.", tags: ["ESG", "cost stickiness", "China"], theory: "Agency Theory" },
+    { title: "The Role of ESG Disclosure in Mitigating Asymmetric Cost Behavior", authors: "Wang, L. & Zhang, H.", journal: "Accounting Review", year: 2022, abstract: "We investigate whether ESG disclosure quality affects asymmetric cost behavior.", tags: ["ESG disclosure", "cost behavior", "transparency"], theory: "Stakeholder Theory" },
+    { title: "Agency Costs, Managerial Expectations, and Cost Stickiness: Theory and Evidence", authors: "Anderson, M., Banker, R., & Janakiraman, S.", journal: "Journal of Accounting and Economics", year: 2003, abstract: "This seminal paper establishes the theory of cost stickiness.", tags: ["cost stickiness", "agency", "foundational"], theory: "Agency Theory" },
+    { title: "Digital Transformation and Cost Structure: Evidence from Manufacturing Firms", authors: "Liu, J., Zhang, K., & Wu, T.", journal: "Management Science", year: 2024, abstract: "This paper explores how digital transformation reshapes firms' cost structures.", tags: ["digital", "cost structure", "manufacturing"], theory: "Resource-Based View" },
+    { title: "Corporate Governance, Board Characteristics, and Cost Stickiness", authors: "Park, S. & Kim, J.", journal: "Asia-Pacific Journal of Financial Studies", year: 2021, abstract: "We examine how corporate governance mechanisms affect cost stickiness in Korean firms.", tags: ["governance", "board", "Korea"], theory: "Institutional Theory" },
+    { title: "Green Innovation, Resource Adjustment Costs, and Asymmetric Cost Behavior", authors: "Zhang, R., Huang, M., & Park, D.", journal: "Strategic Management Journal", year: 2024, abstract: "This study links green innovation activities to cost behavior.", tags: ["green innovation", "cost stickiness", "sustainability"], theory: "Legitimacy Theory" }
   ];
-  for (const p of paperData) { await db.createPaper(tid, p); }
+  paperData.forEach(function(p) { inserts.push(db.createPaper(tid, p)); });
 
-  for (const name of ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"]) {
-    await db.createTheory(tid, name);
-  }
+  ["Agency Theory", "Stakeholder Theory", "Resource-Based View", "Signaling Theory", "Legitimacy Theory", "Institutional Theory"]
+    .forEach(function(name) { inserts.push(db.createTheory(tid, name)); });
 
-  for (const { name, role } of [{ name: "ESG Score", role: "自变量" }, { name: "Cost Stickiness", role: "因变量" }, { name: "Firm Size", role: "控制变量" }, { name: "Leverage", role: "控制变量" }, { name: "ROA", role: "控制变量" }, { name: "Board Size", role: "调节变量" }]) {
-    await db.createVariable(tid, name, role);
-  }
+  [{ name: "ESG Score", role: "自变量" }, { name: "Cost Stickiness", role: "因变量" }, { name: "Firm Size", role: "控制变量" }, { name: "Leverage", role: "控制变量" }, { name: "ROA", role: "控制变量" }, { name: "Board Size", role: "调节变量" }]
+    .forEach(function(v) { inserts.push(db.createVariable(tid, v.name, v.role)); });
 
-  for (const name of ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"]) {
-    await db.createMethod(tid, name);
-  }
+  ["ABJ Model", "Fixed Effects Panel", "2SLS / IV", "Propensity Score Matching", "Difference-in-Differences"]
+    .forEach(function(name) { inserts.push(db.createMethod(tid, name)); });
 
   ["Abstract", "Introduction", "Theoretical Framework", "Literature Review", "Research Gaps", "Future Directions", "Conclusion"]
-    .forEach((s, i) => db.createStructure(tid, s, i));
+    .forEach(function(s, i) { inserts.push(db.createStructure(tid, s, i)); });
+
+  await Promise.all(inserts);
 }
 
 // Prompt cache (loaded from DB, fallback to DEFAULT_PROMPTS)
@@ -52,19 +54,31 @@ var promptsCache = {};
 
 // Init data — called after auth is confirmed
 async function initData() {
-  await db.loadAll();
-  // Seed DB prompts from DEFAULT_PROMPTS (overwrite old versions)
-  try {
-    for (var k in DEFAULT_PROMPTS) {
-      await db.savePrompt(k, DEFAULT_PROMPTS[k]);
-    }
-    promptsCache = Object.assign({}, DEFAULT_PROMPTS);
-  } catch (e) {
-    console.error('seedPrompts error:', e);
+  var t0 = performance.now();
+  // Parallel: load data + load prompts
+  var results = await Promise.all([
+    db.loadAll(),
+    db.loadPrompts().catch(function(e) { console.error('loadPrompts:', e); return {}; })
+  ]);
+  promptsCache = results[1];
+  console.log('initData loadAll+prompts:', Math.round(performance.now() - t0), 'ms');
+
+  // Seed prompts if DB is empty
+  if (!promptsCache || Object.keys(promptsCache).length === 0) {
+    try {
+      for (var k in DEFAULT_PROMPTS) {
+        await db.savePrompt(k, DEFAULT_PROMPTS[k]);
+      }
+      promptsCache = Object.assign({}, DEFAULT_PROMPTS);
+    } catch (e) { console.error('seedPrompts error:', e); }
   }
+
   if (topics.length === 0) {
+    var t1 = performance.now();
     await seedDefaultData();
+    console.log('initData seedDefaultData:', Math.round(performance.now() - t1), 'ms');
   }
+  console.log('initData total:', Math.round(performance.now() - t0), 'ms');
 }
 
 // ── AI Config (per-browser, still localStorage) ──
