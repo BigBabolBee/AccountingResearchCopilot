@@ -752,9 +752,7 @@ async function handlePdfUpload(file) {
     }
 
     // Step 2: Two-phase AI extraction
-    updateProgress('AI 提取基本元数据中...');
     const paperData = await extractPaperMetadata(fullText, config);
-    updateProgress('AI 结构化提取完成');
 
     if (!paperData.title) {
       throw new Error('AI 未能提取到论文标题。请确认 PDF 是文字版（非扫描件），且前几页包含标题信息。');

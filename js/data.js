@@ -517,9 +517,21 @@ Rules:
 
   const metaData = await metaResp.json();
   const metaContent = metaData.choices?.[0]?.message?.content || '{}';
+  console.log('extractPaperMetadata raw:', metaContent.slice(0, 300));
   const metaMatch = metaContent.match(/\{[\s\S]*\}/);
   if (!metaMatch) throw new Error('AI 返回格式异常（基本元数据）');
-  const basic = JSON.parse(metaMatch[0]);
+  var basic;
+  try {
+    basic = JSON.parse(metaMatch[0]);
+  } catch (jsonErr) {
+    // Try to fix common JSON issues: trailing commas, unquoted values
+    var fixed = metaMatch[0].replace(/,\s*}/g, '}').replace(/,\s*\]/g, ']');
+    try {
+      basic = JSON.parse(fixed);
+    } catch (e2) {
+      throw new Error('AI 返回的 JSON 格式有误，请重试');
+    }
+  }
 
   // Phase 2: structured extraction using the "提取器" prompt
   const extractorPrompt = config.prompts?.['提取器']
