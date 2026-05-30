@@ -540,7 +540,7 @@ async function extractPaperStructured(paper, config) {
       model: config.model,
       messages: [
         { role: 'system', content: sysPrompt },
-        { role: 'user', content: '提取以下论文的结构化研究信息：\n\n标题：' + paper.title + '\n摘要：' + (paper.abstract || '').slice(0, 2500) }
+        { role: 'user', content: 'paper title: ' + paper.title + '\nabstract: ' + (paper.abstract || '').slice(0, 2500) }
       ],
       enable_thinking: false,
       temperature: 0.1,
