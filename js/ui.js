@@ -342,64 +342,97 @@ function showPaperDetailModal(paper) {
     || (paper.extractionTheories||[]).length || (paper.extractionVariables||[]).length
     || (paper.relationships||[]).length || (paper.evidence||[]).length;
 
+  function tag(label) {
+    return '<span style="display:inline-block;font-size:11px;background:#eef2f7;color:#2c5282;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(label) + '</span>';
+  }
+  function theoryTag(label) {
+    return '<span style="display:inline-block;font-size:11px;background:#f9f4ea;color:#9a6b3b;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(label) + '</span>';
+  }
+  function varTag(v) {
+    return '<span style="display:inline-block;font-size:11px;background:#e8f6f2;color:#2d7d6f;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(v.variable_name) + ' <span style="font-size:9px;opacity:0.6;font-weight:400">' + escapeHtml(v.variable_role||'') + '</span></span>';
+  }
+
   function buildExtraction() {
     if (!hasExtraction) {
-      return '<div style="text-align:center;padding:24px 0;color:var(--text-tertiary);font-size:13px;line-height:1.6">' +
-        '<div style="font-size:32px;margin-bottom:8px;opacity:0.3">&#128202;</div>' +
-        '暂无 AI 提取的结构化数据<br><span style="font-size:11px">点击下方「提取」按钮，使用 AI 分析本论文</span>' +
+      return '<div style="text-align:center;padding:40px 0;color:var(--text-tertiary);font-size:14px;line-height:1.8">' +
+        '<div style="font-size:40px;margin-bottom:12px;opacity:0.2">&#128202;</div>' +
+        '暂无 AI 提取的结构化数据<br><span style="font-size:12px">点击下方「提取」按钮，使用 AI 分析本论文</span>' +
         '</div>';
     }
-    var h = '<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">';
+    var h = '<div style="border-top:1px solid var(--border);padding-top:20px;margin-top:4px">';
+
+    // Row 1: Research Topic (full width)
     if (paper.researchTopic) {
-      h += '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px"><span style="margin-right:3px">&#127891;</span>1. Research Topic</div>';
-      h += '<div style="font-size:13px;color:var(--text);line-height:1.5;padding-left:4px">' + escapeHtml(paper.researchTopic) + '</div></div>';
+      h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px 16px;border-radius:6px;border:1px solid #e8ecf0">';
+      h += '<div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px">&#127891; Research Topic</div>';
+      h += '<div style="font-size:13px;color:var(--text);line-height:1.6">' + escapeHtml(paper.researchTopic) + '</div>';
+      h += '</div>';
     }
-    if ((paper.coreConcepts||[]).length) {
-      h += '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px"><span style="margin-right:3px">&#128218;</span>2. Core Concepts</div>';
-      h += '<div style="display:flex;gap:5px;flex-wrap:wrap">';
-      (paper.coreConcepts||[]).forEach(function(c) { h += '<span style="font-size:11px;background:#eef2f7;color:#2c5282;padding:3px 9px;border-radius:4px;font-weight:500">' + escapeHtml(c) + '</span>'; });
-      h += '</div></div>';
+
+    // Row 2: Two columns — Core Concepts | Theories
+    var hasLeft = (paper.coreConcepts||[]).length > 0;
+    var hasRight = (paper.extractionTheories||[]).length > 0;
+    if (hasLeft || hasRight) {
+      h += '<div style="display:flex;gap:16px;margin-bottom:16px">';
+      if (hasLeft) {
+        h += '<div style="flex:1;min-width:0">';
+        h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128218; Core Concepts</div>';
+        h += '<div style="display:flex;flex-wrap:wrap">';
+        (paper.coreConcepts||[]).forEach(function(c) { h += tag(c); });
+        h += '</div></div>';
+      }
+      if (hasRight) {
+        h += '<div style="flex:1;min-width:0">';
+        h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#127758; Theories</div>';
+        h += '<div style="display:flex;flex-wrap:wrap">';
+        (paper.extractionTheories||[]).forEach(function(t) { h += theoryTag(t); });
+        h += '</div></div>';
+      }
+      h += '</div>';
     }
-    if ((paper.extractionTheories||[]).length) {
-      h += '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px"><span style="margin-right:3px">&#127758;</span>3. Theories</div>';
-      h += '<div style="display:flex;gap:5px;flex-wrap:wrap">';
-      (paper.extractionTheories||[]).forEach(function(t) { h += '<span style="font-size:11px;background:#f9f4ea;color:#9a6b3b;padding:3px 9px;border-radius:4px;font-weight:500">' + escapeHtml(t) + '</span>'; });
-      h += '</div></div>';
-    }
+
+    // Row 3: Variables (full width)
     if ((paper.extractionVariables||[]).length) {
-      h += '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px"><span style="margin-right:3px">&#128200;</span>4. Variables</div>';
-      h += '<div style="display:flex;gap:5px;flex-wrap:wrap">';
-      (paper.extractionVariables||[]).forEach(function(v) {
-        h += '<span style="font-size:11px;background:#e8f6f2;color:#2d7d6f;padding:3px 9px;border-radius:4px;font-weight:500">' + escapeHtml(v.variable_name) +
-          '<span style="font-size:9px;opacity:0.55;font-weight:400;margin-left:3px">' + escapeHtml(v.variable_role||'') + '</span></span>';
-      });
+      h += '<div style="margin-bottom:16px">';
+      h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128200; Variables</div>';
+      h += '<div style="display:flex;flex-wrap:wrap">';
+      (paper.extractionVariables||[]).forEach(function(v) { h += varTag(v); });
       h += '</div></div>';
     }
+
+    // Row 4: Relationships (full width)
     if ((paper.relationships||[]).length) {
-      h += '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px"><span style="margin-right:3px">&#128279;</span>5. Research Relationships</div>';
+      h += '<div style="margin-bottom:16px">';
+      h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:8px">&#128279; Research Relationships</div>';
       (paper.relationships||[]).forEach(function(r) {
-        h += '<div style="font-size:12px;color:var(--text-secondary);padding:4px 10px;margin-bottom:4px;background:var(--bg);border-radius:4px;border-left:3px solid ' +
-          'var(--accent);display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        h += '<div style="font-size:12px;color:var(--text-secondary);padding:6px 12px;margin-bottom:4px;background:var(--bg);border-radius:4px;border-left:3px solid var(--accent);display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
           '<span style="font-weight:600;color:var(--text)">' + escapeHtml(r.subject) + '</span>' +
-          '<span style="color:var(--accent);font-size:10px;white-space:nowrap">&#8594; ' + escapeHtml(r.relation||'') + ' &#8594;</span>' +
+          '<span style="color:var(--accent);font-size:10px;white-space:nowrap;font-weight:600">&#8594; ' + escapeHtml(r.relation||'') + ' &#8594;</span>' +
           '<span style="font-weight:600;color:var(--text)">' + escapeHtml(r.object) + '</span></div>';
       });
+      h += '</div>';
     }
+
+    // Row 5: Evidence (full width)
     if ((paper.evidence||[]).length) {
-      h += '<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px"><span style="margin-right:3px">&#128220;</span>6. Evidence Sentences</div>';
+      h += '<div style="margin-bottom:16px">';
+      h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128220; Evidence Sentences</div>';
       (paper.evidence||[]).forEach(function(e,i) {
-        h += '<div style="font-size:11px;color:var(--text-tertiary);padding:4px 10px;margin-bottom:3px;border-left:2px solid #b0bec5;line-height:1.6;background:#fafbfc">' +
-          '<span style="color:#90a4ae;margin-right:4px">' + (i+1) + '.</span>' + escapeHtml(e) + '</div>';
+        h += '<div style="font-size:12px;color:var(--text-tertiary);padding:6px 12px;margin-bottom:4px;border-left:3px solid #dfe6ed;line-height:1.7;background:#fafbfc;border-radius:0 4px 4px 0">' +
+          '<span style="color:#b0bec5;margin-right:6px;font-size:10px;font-weight:600">' + (i+1) + '</span>' + escapeHtml(e) + '</div>';
       });
+      h += '</div>';
     }
+
     h += '</div>';
     return h;
   }
 
+  // Build basic info
   var tagsHtml = '';
   if (paper.tags && paper.tags.length) {
     tagsHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">';
-    paper.tags.forEach(function(t) { tagsHtml += '<span style="font-size:11px;background:#edf2f9;color:#4a6fa5;padding:2px 8px;border-radius:3px">' + escapeHtml(t) + '</span>'; });
+    paper.tags.forEach(function(t) { tagsHtml += '<span style="font-size:11px;background:#edf2f9;color:#4a6fa5;padding:3px 8px;border-radius:3px">' + escapeHtml(t) + '</span>'; });
     tagsHtml += '</div>';
   }
 
@@ -409,23 +442,28 @@ function showPaperDetailModal(paper) {
   }
 
   overlay.innerHTML =
-    '<div class="term-modal" style="width:780px;padding:28px 32px">' +
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px">' +
-    '<div style="font-size:18px;font-weight:700;color:var(--text);line-height:1.4;flex:1;padding-right:16px">' + escapeHtml(paper.title) + '</div>' +
-    (paper.year ? '<span style="font-size:22px;font-weight:700;color:var(--accent);flex-shrink:0">' + paper.year + '</span>' : '') +
+    '<div class="term-modal" style="width:960px;padding:32px 36px;max-height:92vh">' +
+    // Title row
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">' +
+    '<div style="font-size:20px;font-weight:700;color:var(--text);line-height:1.4;flex:1;padding-right:20px">' + escapeHtml(paper.title) + '</div>' +
+    (paper.year ? '<span style="font-size:24px;font-weight:700;color:var(--accent);flex-shrink:0">' + paper.year + '</span>' : '') +
     '</div>' +
-    '<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:4px;font-size:12px;color:var(--text-tertiary)">' +
+    // Authors + Journal
+    '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--text-tertiary)">' +
     '<span>&#128100; ' + escapeHtml(paper.authors||'—') + '</span>' +
     '<span>&#128211; ' + escapeHtml(paper.journal||'—') + '</span>' +
     '</div>' +
     tagsHtml +
     theoryHtml +
-    '<div style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:18px;max-height:140px;overflow-y:auto;padding:12px 16px;background:#f8f9fb;border-radius:6px;border:1px solid #e8ecf0">' +
+    // Abstract
+    '<div style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:20px;max-height:180px;overflow-y:auto;padding:14px 18px;background:#f8f9fb;border-radius:6px;border:1px solid #e8ecf0">' +
     escapeHtml(paper.abstract||'暂无摘要') +
     '</div>' +
+    // Structured extraction
     buildExtraction() +
-    '<div class="term-modal-actions" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">' +
-    '<span style="font-size:11px;color:var(--text-tertiary);margin-right:auto;line-height:32px">' + (hasExtraction ? '&#9989; 提取自 AI 分析' : '&#9889; 可点击提取按钮进行 AI 分析') + '</span>' +
+    // Footer
+    '<div class="term-modal-actions" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">' +
+    '<span style="font-size:12px;color:var(--text-tertiary);margin-right:auto;line-height:32px">' + (hasExtraction ? '&#9989; 提取自 AI 分析' : '&#9889; 可点击提取按钮进行 AI 分析') + '</span>' +
     '<button class="btn btn-primary" id="detailExtract">&#9889; 提取</button>' +
     '<button class="btn btn-cancel" id="detailClose">关闭</button>' +
     '</div>' +
