@@ -348,8 +348,10 @@ function showPaperDetailModal(paper) {
   function theoryTag(label) {
     return '<span style="display:inline-block;font-size:11px;background:#f9f4ea;color:#9a6b3b;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(label) + '</span>';
   }
+  var roleMap = { 'dependent_variable': '因变量', 'independent_variable': '自变量', 'moderator': '调节变量', 'mediator': '中介变量', 'control_variable': '控制变量', 'unknown': '未知', '因变量': '因变量', '自变量': '自变量', '调节变量': '调节变量', '中介变量': '中介变量', '控制变量': '控制变量', '未知': '未知' };
   function varTag(v) {
-    return '<span style="display:inline-block;font-size:11px;background:#e8f6f2;color:#2d7d6f;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(v.variable_name) + ' <span style="font-size:9px;opacity:0.6;font-weight:400">' + escapeHtml(v.variable_role||'') + '</span></span>';
+    var roleCN = roleMap[v.variable_role] || v.variable_role || '';
+    return '<span style="display:inline-block;font-size:11px;background:#e8f6f2;color:#2d7d6f;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(v.variable_name) + ' <span style="font-size:9px;opacity:0.6;font-weight:400">' + roleCN + '</span></span>';
   }
 
   function buildExtraction() {
@@ -402,12 +404,15 @@ function showPaperDetailModal(paper) {
 
     // Row 4: Relationships (full width)
     if ((paper.relationships||[]).length) {
+      // Normalize relation names to Chinese
+      var relMap = { 'affects': '影响', 'moderates': '调节', 'mediates': '中介', 'correlates_with': '相关', 'investigates': '研究', '影响': '影响', '调节': '调节', '中介': '中介', '相关': '相关', '研究': '研究' };
       h += '<div style="margin-bottom:16px">';
       h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:8px">&#128279; Research Relationships</div>';
       (paper.relationships||[]).forEach(function(r) {
+        var relCN = relMap[r.relation] || r.relation || '';
         h += '<div style="font-size:12px;color:var(--text-secondary);padding:6px 12px;margin-bottom:4px;background:var(--bg);border-radius:4px;border-left:3px solid var(--accent);display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
           '<span style="font-weight:600;color:var(--text)">' + escapeHtml(r.subject) + '</span>' +
-          '<span style="color:var(--accent);font-size:10px;white-space:nowrap;font-weight:600">&#8594; ' + escapeHtml(r.relation||'') + ' &#8594;</span>' +
+          '<span style="color:var(--accent);font-size:10px;white-space:nowrap;font-weight:600">&#8594; ' + relCN + ' &#8594;</span>' +
           '<span style="font-weight:600;color:var(--text)">' + escapeHtml(r.object) + '</span></div>';
       });
       h += '</div>';
