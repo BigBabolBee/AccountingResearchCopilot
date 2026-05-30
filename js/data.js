@@ -513,7 +513,7 @@ Rules:
 
   if (!metaResp.ok) {
     const text = await metaResp.text();
-    throw new Error('AI API 错误 (' + metaResp.status + ')');
+    throw new Error('PDF解析失败，请手动输入文献元数据');
   }
 
   const metaData = await metaResp.json();
@@ -560,7 +560,7 @@ Rules:
     }
     if (!basic) {
       console.error('JSON parse error, raw:', jsonStr.slice(-200));
-      throw new Error('AI 返回的 JSON 格式有误，请重试');
+      throw new Error('PDF解析失败，请手动输入文献元数据');
     }
   }
 
