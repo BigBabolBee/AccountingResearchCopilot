@@ -338,92 +338,25 @@ function showPaperDetailModal(paper) {
   var overlay = document.createElement('div');
   overlay.className = 'term-modal-overlay';
 
-  var hasExtraction = paper.researchTopic || (paper.coreConcepts||[]).length
-    || (paper.extractionTheories||[]).length || (paper.extractionVariables||[]).length
-    || (paper.relationships||[]).length || (paper.evidence||[]).length;
-
-  function tag(label) {
-    return '<span style="display:inline-block;font-size:11px;background:#eef2f7;color:#2c5282;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(label) + '</span>';
-  }
-  function theoryTag(label) {
-    return '<span style="display:inline-block;font-size:11px;background:#f9f4ea;color:#9a6b3b;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(label) + '</span>';
-  }
-  function varTag(v) {
-    return '<span style="display:inline-block;font-size:11px;background:#e8f6f2;color:#2d7d6f;padding:3px 10px;border-radius:4px;font-weight:500;margin:0 4px 4px 0">' + escapeHtml(v.variable_name) + ' <span style="font-size:9px;opacity:0.6;font-weight:400">' + escapeHtml(v.variable_role||'') + '</span></span>';
-  }
-
   function buildExtraction() {
-    if (!hasExtraction) {
-      return '<div style="text-align:center;padding:40px 0;color:var(--text-tertiary);font-size:14px;line-height:1.8">' +
-        '<div style="font-size:40px;margin-bottom:12px;opacity:0.2">&#128202;</div>' +
-        '暂无 AI 提取的结构化数据<br><span style="font-size:12px">点击下方「提取」按钮，使用 AI 分析本论文</span>' +
-        '</div>';
-    }
     var h = '<div style="border-top:1px solid var(--border);padding-top:20px;margin-top:4px">';
-
-    // Row 1: Research Topic (full width)
-    if (paper.researchTopic) {
-      h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px 16px;border-radius:6px;border:1px solid #e8ecf0">';
-      h += '<div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px">&#127891; Research Topic</div>';
-      h += '<div style="font-size:13px;color:var(--text);line-height:1.6">' + escapeHtml(paper.researchTopic) + '</div>';
-      h += '</div>';
-    }
-
-    // Row 2: Two columns — Core Concepts | Theories
-    var hasLeft = (paper.coreConcepts||[]).length > 0;
-    var hasRight = (paper.extractionTheories||[]).length > 0;
-    if (hasLeft || hasRight) {
-      h += '<div style="display:flex;gap:16px;margin-bottom:16px">';
-      if (hasLeft) {
-        h += '<div style="flex:1;min-width:0">';
-        h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128218; Core Concepts</div>';
-        h += '<div style="display:flex;flex-wrap:wrap">';
-        (paper.coreConcepts||[]).forEach(function(c) { h += tag(c); });
-        h += '</div></div>';
-      }
-      if (hasRight) {
-        h += '<div style="flex:1;min-width:0">';
-        h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#127758; Theories</div>';
-        h += '<div style="display:flex;flex-wrap:wrap">';
-        (paper.extractionTheories||[]).forEach(function(t) { h += theoryTag(t); });
-        h += '</div></div>';
-      }
-      h += '</div>';
-    }
-
-    // Row 3: Variables (full width)
-    if ((paper.extractionVariables||[]).length) {
-      h += '<div style="margin-bottom:16px">';
-      h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128200; Variables</div>';
-      h += '<div style="display:flex;flex-wrap:wrap">';
-      (paper.extractionVariables||[]).forEach(function(v) { h += varTag(v); });
-      h += '</div></div>';
-    }
-
-    // Row 4: Relationships (full width)
-    if ((paper.relationships||[]).length) {
-      h += '<div style="margin-bottom:16px">';
-      h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:8px">&#128279; Research Relationships</div>';
-      (paper.relationships||[]).forEach(function(r) {
-        h += '<div style="font-size:12px;color:var(--text-secondary);padding:6px 12px;margin-bottom:4px;background:var(--bg);border-radius:4px;border-left:3px solid var(--accent);display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
-          '<span style="font-weight:600;color:var(--text)">' + escapeHtml(r.subject) + '</span>' +
-          '<span style="color:var(--accent);font-size:10px;white-space:nowrap;font-weight:600">&#8594; ' + escapeHtml(r.relation||'') + ' &#8594;</span>' +
-          '<span style="font-weight:600;color:var(--text)">' + escapeHtml(r.object) + '</span></div>';
-      });
-      h += '</div>';
-    }
-
-    // Row 5: Evidence (full width)
-    if ((paper.evidence||[]).length) {
-      h += '<div style="margin-bottom:16px">';
-      h += '<div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128220; Evidence Sentences</div>';
-      (paper.evidence||[]).forEach(function(e,i) {
-        h += '<div style="font-size:12px;color:var(--text-tertiary);padding:6px 12px;margin-bottom:4px;border-left:3px solid #dfe6ed;line-height:1.7;background:#fafbfc;border-radius:0 4px 4px 0">' +
-          '<span style="color:#b0bec5;margin-right:6px;font-size:10px;font-weight:600">' + (i+1) + '</span>' + escapeHtml(e) + '</div>';
-      });
-      h += '</div>';
-    }
-
+    // Ids for editor binding: ext-{field}
+    // 1. Research Topic
+    h += '<div style="margin-bottom:16px;background:#f8fafc;padding:12px 16px;border-radius:6px;border:1px solid #e8ecf0">';
+    h += '<div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px">&#127891; Research Topic</div>';
+    h += '<div id="ext-researchTopic" style="font-size:13px;color:var(--text);line-height:1.6;min-height:22px">' + escapeHtml(paper.researchTopic||'') + '</div>';
+    h += '</div>';
+    // 2+3. Two columns
+    h += '<div style="display:flex;gap:16px;margin-bottom:16px">';
+    h += '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128218; Core Concepts</div><div id="ext-coreConcepts" style="display:flex;flex-wrap:wrap"></div></div>';
+    h += '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#127758; Theories</div><div id="ext-extractionTheories" style="display:flex;flex-wrap:wrap"></div></div>';
+    h += '</div>';
+    // 4. Variables
+    h += '<div style="margin-bottom:16px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128200; Variables</div><div id="ext-extractionVariables" style="display:flex;flex-wrap:wrap"></div></div>';
+    // 5. Relationships
+    h += '<div style="margin-bottom:16px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:8px">&#128279; Research Relationships</div><div id="ext-relationships"></div></div>';
+    // 6. Evidence
+    h += '<div style="margin-bottom:16px"><div style="font-weight:700;font-size:12px;color:var(--accent);margin-bottom:6px">&#128220; Evidence Sentences</div><div id="ext-evidence"></div></div>';
     h += '</div>';
     return h;
   }
@@ -463,7 +396,7 @@ function showPaperDetailModal(paper) {
     buildExtraction() +
     // Footer
     '<div class="term-modal-actions" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">' +
-    '<span style="font-size:12px;color:var(--text-tertiary);margin-right:auto;line-height:32px">' + (hasExtraction ? '&#9989; 提取自 AI 分析' : '&#9889; 可点击提取按钮进行 AI 分析') + '</span>' +
+    '<span style="font-size:12px;color:var(--text-tertiary);margin-right:auto;line-height:32px">&#9998; 点击编辑 &#10005; 删除 &#43; 新增</span>' +
     '<button class="btn btn-primary" id="detailExtract">&#9889; 提取</button>' +
     '<button class="btn btn-cancel" id="detailClose">关闭</button>' +
     '</div>' +
@@ -508,6 +441,104 @@ function showPaperDetailModal(paper) {
       }
     });
   }
+
+  // ====== Extraction Field Editors ======
+  var saveField = function(field, value) {
+    var u = {}; u[field] = value; paper[field] = value;
+    db.updatePaper(paper.id, u);
+  };
+
+  var renderExtField = function() {
+    // Research Topic
+    var tEl = overlay.querySelector('#ext-researchTopic');
+    if (tEl) {
+      tEl.style.cursor = 'pointer'; tEl.title = '点击编辑';
+      tEl.addEventListener('click', function() {
+        var cur = paper.researchTopic || '';
+        tEl.innerHTML = '<input type="text" value="' + escapeHtml(cur).replace(/"/g,'&quot;') + '" style="width:100%;border:1px solid var(--accent);border-radius:4px;padding:4px 8px;font-size:13px;font-family:var(--font);outline:none;box-sizing:border-box">';
+        var inp = tEl.querySelector('input');
+        inp.focus(); inp.select();
+        function done() { var v = inp.value.trim(); saveField('researchTopic', v); tEl.textContent = v || ''; tEl.style.cursor = 'pointer'; }
+        inp.addEventListener('blur', done);
+        inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') inp.blur(); });
+      });
+    }
+    // Array fields: concepts, theories, variables, relationships, evidence
+    var configs = [
+      { id: 'ext-coreConcepts', field: 'coreConcepts', isArr: true, itemStyle: 'background:#eef2f7;color:#2c5282', addLabel: '添加概念', addFn: function() { var v = prompt('输入核心概念：'); return v ? v.trim() : null; } },
+      { id: 'ext-extractionTheories', field: 'extractionTheories', isArr: true, itemStyle: 'background:#f9f4ea;color:#9a6b3b', addLabel: '添加理论', addFn: function() { var v = prompt('输入理论框架：'); return v ? v.trim() : null; } },
+      { id: 'ext-extractionVariables', field: 'extractionVariables', isArr: true, itemStyle: 'background:#e8f6f2;color:#2d7d6f', addLabel: '添加变量',
+        renderFn: function(v) { return escapeHtml(v.variable_name) + ' <span style="font-size:9px;opacity:0.6">' + escapeHtml(v.variable_role||'') + '</span>'; },
+        addFn: function() { var n = prompt('变量名称：'); if (!n) return null; var r = prompt('角色（因变量/自变量/调节变量/中介变量/控制变量）：','自变量'); if (!r) return null; return { variable_name: n.trim(), variable_role: r.trim() }; },
+        editFn: function(item) { var n = prompt('变量名称：',item.variable_name); if (n===null) return null; var r = prompt('角色：',item.variable_role); if (r===null) return null; return { variable_name: n.trim(), variable_role: r.trim() }; }
+      },
+      { id: 'ext-relationships', field: 'relationships', isArr: true, itemStyle: 'background:var(--bg);border-left:3px solid var(--accent);padding:4px 10px;border-radius:0 4px 4px 0;display:inline-block',
+        renderFn: function(r) { return '<b>' + escapeHtml(r.subject) + '</b> <span style="color:var(--accent);font-size:10px">&#8594; ' + escapeHtml(r.relation||'') + ' &#8594;</span> <b>' + escapeHtml(r.object) + '</b>'; },
+        addFn: function() { var s = prompt('主体 Subject：'); if (!s) return null; var r = prompt('关系（影响/调节/中介/相关/研究）：','影响'); if (!r) return null; var o = prompt('客体 Object：'); if (!o) return null; return { subject: s.trim(), relation: r.trim(), object: o.trim() }; },
+        editFn: function(item) { var s = prompt('主体：',item.subject); if (s===null) return null; var r = prompt('关系：',item.relation); if (r===null) return null; var o = prompt('客体：',item.object); if (o===null) return null; return { subject: s.trim(), relation: r.trim(), object: o.trim() }; }
+      },
+      { id: 'ext-evidence', field: 'evidence', isArr: true, itemStyle: 'font-size:11px;color:var(--text-secondary);border-left:3px solid #dfe6ed;padding:4px 10px;margin-bottom:4px;display:block;background:#fafbfc;border-radius:0 4px 4px 0', addLabel: '添加证据句', addFn: function() { var v = prompt('输入证据句子（引用原文）：'); return v ? v.trim() : null; } }
+    ];
+
+    configs.forEach(function(cfg) {
+      var container = overlay.querySelector('#' + cfg.id);
+      if (!container) return;
+      function refresh() {
+        var arr = paper[cfg.field] || [];
+        container.innerHTML = '';
+        arr.forEach(function(item, i) {
+          var w = document.createElement('span');
+          w.style.cssText = 'position:relative;margin:0 4px 4px 0;' + cfg.itemStyle;
+          w.innerHTML = cfg.renderFn ? cfg.renderFn(item) : escapeHtml(item);
+          // Edit
+          var ed = document.createElement('span');
+          ed.innerHTML = ' &#9998;'; ed.title = '编辑';
+          ed.style.cssText = 'cursor:pointer;font-size:10px;opacity:0.4';
+          (function(idx) {
+            ed.addEventListener('click', function(ev) {
+              ev.stopPropagation();
+              var old = arr[idx];
+              var result;
+              if (cfg.editFn) {
+                result = cfg.editFn(old);
+              } else {
+                var v = prompt('编辑：', old);
+                if (v !== null && v.trim() !== '') result = v.trim();
+              }
+              if (result !== undefined && result !== null) { arr[idx] = result; saveField(cfg.field, arr.slice()); refresh(); }
+            });
+          })(i);
+          w.appendChild(ed);
+          // Delete
+          var dl = document.createElement('span');
+          dl.innerHTML = ' &times;'; dl.title = '删除';
+          dl.style.cssText = 'cursor:pointer;font-size:14px;color:#c0392b;opacity:0.5;font-weight:700';
+          (function(idx) {
+            dl.addEventListener('click', function(ev) {
+              ev.stopPropagation();
+              if (!confirm('确定删除？')) return;
+              arr.splice(idx, 1);
+              saveField(cfg.field, arr.slice());
+              refresh();
+            });
+          })(i);
+          w.appendChild(dl);
+          container.appendChild(w);
+        });
+        // Add button
+        var ab = document.createElement('span');
+        ab.innerHTML = '+'; ab.title = cfg.addLabel || '新增';
+        ab.style.cssText = 'cursor:pointer;font-weight:700;color:var(--accent);border:1px dashed var(--border);border-radius:4px;padding:2px 8px;font-size:13px;display:inline-flex;align-items:center';
+        ab.addEventListener('click', function() {
+          var result = cfg.addFn();
+          if (result) { arr = paper[cfg.field] || []; arr.push(result); saveField(cfg.field, arr.slice()); refresh(); }
+        });
+        container.appendChild(ab);
+      }
+      refresh();
+    });
+  };
+  renderExtField();
 }
 function showCardItemModal(cardType) {
   const topic = getSelectedTopic();
