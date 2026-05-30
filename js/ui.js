@@ -4,6 +4,23 @@ let rightPanelMode = 'list';   // 'list' | 'detail'
 let rightPanelTerm = null;     // current term name in detail mode
 
 // ── Toast notification ──
+function showConfirm(msg, onYes) {
+  var ov = document.createElement('div');
+  ov.className = 'term-modal-overlay';
+  ov.style.zIndex = '10000';
+  ov.innerHTML =
+    '<div class="term-modal" style="width:360px;text-align:center;padding:24px">' +
+    '<div style="font-size:15px;color:var(--text);margin-bottom:8px">' + msg + '</div>' +
+    '<div class="term-modal-actions" style="justify-content:center;margin-top:16px">' +
+    '<button class="btn btn-cancel" id="confirmNo">取消</button>' +
+    '<button class="btn btn-delete" id="confirmYes">确认删除</button>' +
+    '</div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#confirmNo').onclick = function() { ov.remove(); };
+  ov.querySelector('#confirmYes').onclick = function() { ov.remove(); onYes(); };
+  ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+}
+
 function showToast(msg, type) {
   var container = document.getElementById('toastContainer');
   if (!container) {
@@ -469,8 +486,7 @@ function renderPapers(papersList) {
     btn.addEventListener('click', async function(e) {
       e.stopPropagation();
       const id = this.dataset.id;
-      if (!confirm('确定要删除这篇文献吗？')) return;
-      // Placeholder cards (pdf-xxx) only exist in memory, no DB record
+      showConfirm('确定要删除这篇文献吗？', async function() {
       if (id && id.indexOf('pdf-') === 0) {
         papers = papers.filter(function(p) { return p.id !== id; });
         renderCenter(getSelectedTopic());
@@ -484,6 +500,7 @@ function renderPapers(papersList) {
         showToast('删除失败：' + (err.message || '网络错误'), 'error');
       }
     });
+  });
   });
 
   container.querySelectorAll('.paper-card').forEach(card => {
@@ -669,15 +686,15 @@ function showPaperDetailModal(paper) {
     dl.style.cssText = BTN + 'color:#c0392b;font-size:16px;font-weight:400';
     dl.addEventListener('click', function(ev) {
       ev.stopPropagation();
-      if (!confirm('确定删除？')) return;
+      showConfirm('确定删除此项？', function() {
       arr.splice(idx, 1);
       saveField(field, arr.slice());
       refreshArray(container, arr, field, editFn);
     });
+  });
     actDiv.appendChild(ed);
     actDiv.appendChild(dl);
     wrapper.appendChild(actDiv);
-    // Hover toggle
     wrapper.addEventListener('mouseenter', function() { actDiv.style.display = 'inline-flex'; });
     wrapper.addEventListener('mouseleave', function() { actDiv.style.display = 'none'; });
   }
