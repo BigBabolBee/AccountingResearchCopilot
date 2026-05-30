@@ -130,27 +130,14 @@ function renderRightPanel(topic) {
 function renderExtractionStats(panel, topic) {
   var tid = topic.id;
   var papers = getPapers(tid);
+  var cached = topicStatsCache[tid];
 
-  // Aggregate stats
-  var stats = {
-    researchTopics: 0,
-    concepts: {}, theories: {}, variables: {}, varRoles: {},
-    relationships: [], relationTypes: {}, evidenceCount: 0
-  };
-
+  // Use cached stats or compute fresh
+  var stats = cached || { concepts: {}, theories: {}, variables: {}, varRoles: {}, relationTypes: {} };
+  var researchTopics = 0, relCount = 0;
   papers.forEach(function(p) {
-    if (p.researchTopic) stats.researchTopics++;
-    (p.coreConcepts || []).forEach(function(c) { stats.concepts[c] = (stats.concepts[c] || 0) + 1; });
-    (p.extractionTheories || []).forEach(function(t) { stats.theories[t] = (stats.theories[t] || 0) + 1; });
-    (p.extractionVariables || []).forEach(function(v) {
-      var key = v.variable_name; stats.variables[key] = (stats.variables[key] || 0) + 1;
-      var role = v.variable_role || '未知'; stats.varRoles[role] = (stats.varRoles[role] || 0) + 1;
-    });
-    (p.relationships || []).forEach(function(r) {
-      stats.relationships.push(r);
-      stats.relationTypes[r.relation] = (stats.relationTypes[r.relation] || 0) + 1;
-    });
-    stats.evidenceCount += (p.evidence || []).length;
+    if (p.researchTopic) researchTopics++;
+    relCount += (p.relationships || []).length;
   });
 
   function topKeys(obj, limit) {
@@ -163,7 +150,7 @@ function renderExtractionStats(panel, topic) {
 
   // 1. Research Topics
   html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#127891; Research Topics</div>';
-  html += '<div style="font-size:13px;color:var(--text);padding:4px 0">' + stats.researchTopics + ' / ' + papers.length + ' 篇文献</div></div>';
+  html += '<div style="font-size:13px;color:var(--text);padding:4px 0">' + researchTopics + ' / ' + papers.length + ' 篇文献</div></div>';
 
   // 2. Core Concepts
   html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128218; Core Concepts</div>';
@@ -201,7 +188,7 @@ function renderExtractionStats(panel, topic) {
 
   // 5. Relationships
   html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px">&#128279; Relationships</div>';
-  html += '<div style="font-size:11px;color:var(--text-secondary)">共 ' + stats.relationships.length + ' 条关系</div>';
+  html += '<div style="font-size:11px;color:var(--text-secondary)">共 ' + relCount + ' 条关系</div>';
   var relTypes = topKeys(stats.relationTypes, 6);
   if (relTypes.length) {
     html += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">';
@@ -211,6 +198,23 @@ function renderExtractionStats(panel, topic) {
   html += '</div>';
 
   panel.innerHTML = html;
+}
+
+async function recomputeStats(topicId) {
+  if (!topicId) return;
+  var papers = getPapers(topicId);
+  var stats = { concepts: {}, theories: {}, variables: {}, varRoles: {}, relationTypes: {} };
+  papers.forEach(function(p) {
+    (p.coreConcepts || []).forEach(function(c) { stats.concepts[c] = (stats.concepts[c] || 0) + 1; });
+    (p.extractionTheories || []).forEach(function(t) { stats.theories[t] = (stats.theories[t] || 0) + 1; });
+    (p.extractionVariables || []).forEach(function(v) {
+      stats.variables[v.variable_name] = (stats.variables[v.variable_name] || 0) + 1;
+      var role = v.variable_role || '未知'; stats.varRoles[role] = (stats.varRoles[role] || 0) + 1;
+    });
+    (p.relationships || []).forEach(function(r) { stats.relationTypes[r.relation] = (stats.relationTypes[r.relation] || 0) + 1; });
+  });
+  topicStatsCache[topicId] = stats;
+  try { await db.saveStats(topicId, stats); } catch(e) { console.error('saveStats error:', e); }
 }
 
 function renderTermList(panel, topic, allTerms) {
@@ -422,6 +426,7 @@ function renderPapers(papersList) {
       }
       try {
         await db.deletePaper(id);
+        recomputeStats(getSelectedTopic()?.id);
         renderCenter(getSelectedTopic());
       } catch (err) {
         alert('删除失败：' + (err.message || '网络错误，请稍后重试'));
@@ -551,6 +556,7 @@ function showPaperDetailModal(paper) {
           });
           Object.assign(paper, s);
           delete activeExtractions[paper.id];
+          recomputeStats(getSelectedTopic()?.id);
           // Update the card's "AI提取中" tag directly (don't disrupt current view)
           var card = document.querySelector('.paper-card[data-id="' + paper.id + '"]');
           if (card) {
@@ -834,6 +840,7 @@ function showCardItemModal(cardType) {
         theory: overlay.querySelector('#cardItemTheory')?.value.trim() || ''
       };
       await db.createPaper(tid, data);
+      recomputeStats(tid);
       close();
       renderCenter(getSelectedTopic());
     } else if (cardType === 'theories') {
@@ -881,6 +888,8 @@ function isDuplicatePaper(topicId, title, authors) {
 
 // Track active background extractions per paper ID
 var activeExtractions = {};
+// Cached stats per topic (loaded from DB, refreshed on mutations)
+var topicStatsCache = {};
 
 async function handlePdfUpload(file) {
   if (!file) return;
@@ -930,6 +939,7 @@ async function handlePdfUpload(file) {
     // Remove placeholder WITHOUT reloading (reload would kill other placeholders)
     papers = papers.filter(function(p) { return p.id !== placeholderId; });
     // db.createPaper already pushed to papers array, refresh UI
+    recomputeStats(topic.id);
     activeCard = 'papers';
     renderCenter(getSelectedTopic());
 

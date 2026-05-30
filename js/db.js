@@ -274,6 +274,51 @@ const db = (() => {
     // Sharing
     getTopicMembers, addTopicMember, removeTopicMember, lookupUserByEmail,
     // Prompts
-    loadPrompts, savePrompt
+    loadPrompts, savePrompt,
+
+    // ── Extraction Stats ──
+    async saveStats(topicId, stats) {
+      if (!topicId || !stats) return;
+      var rows = [];
+      function add(type, key, val) {
+        if (key && val > 0) rows.push({ topic_id: topicId, stat_type: type, stat_key: key, stat_value: val, updated_at: new Date().toISOString() });
+      }
+      Object.keys(stats.concepts || {}).forEach(function(k) { add('concept', k, stats.concepts[k]); });
+      Object.keys(stats.theories || {}).forEach(function(k) { add('theory', k, stats.theories[k]); });
+      Object.keys(stats.variables || {}).forEach(function(k) { add('variable', k, stats.variables[k]); });
+      Object.keys(stats.varRoles || {}).forEach(function(k) { add('variable_role', k, stats.varRoles[k]); });
+      Object.keys(stats.relationTypes || {}).forEach(function(k) { add('relation', k, stats.relationTypes[k]); });
+      // Clear old stats for this topic, then insert new ones
+      await supabase.from('extraction_stats').delete().eq('topic_id', topicId).neq('stat_type', '__noop__');
+      if (rows.length > 0) {
+        // Insert in batches of 20 to avoid large payloads
+        for (var i = 0; i < rows.length; i += 20) {
+          await supabase.from('extraction_stats').insert(rows.slice(i, i + 20));
+        }
+      }
+    },
+
+    async loadStats(topicId) {
+      if (!topicId) return null;
+      var result = { concepts: {}, theories: {}, variables: {}, varRoles: {}, relationTypes: {} };
+      var allRows = [];
+      // Fetch all stats for this topic (may need pagination if many)
+      var from = 0, pageSize = 200;
+      while (true) {
+        var resp = await supabase.from('extraction_stats').select('stat_type, stat_key, stat_value').eq('topic_id', topicId).range(from, from + pageSize - 1);
+        if (resp.error || !resp.data) break;
+        allRows = allRows.concat(resp.data);
+        if (resp.data.length < pageSize) break;
+        from += pageSize;
+      }
+      allRows.forEach(function(r) {
+        if (r.stat_type === 'concept') result.concepts[r.stat_key] = r.stat_value;
+        else if (r.stat_type === 'theory') result.theories[r.stat_key] = r.stat_value;
+        else if (r.stat_type === 'variable') result.variables[r.stat_key] = r.stat_value;
+        else if (r.stat_type === 'variable_role') result.varRoles[r.stat_key] = r.stat_value;
+        else if (r.stat_type === 'relation') result.relationTypes[r.stat_key] = r.stat_value;
+      });
+      return result;
+    }
   };
 })();
