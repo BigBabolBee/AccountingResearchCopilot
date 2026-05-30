@@ -131,82 +131,88 @@ function renderExtractionStats(panel, topic) {
   var tid = topic.id;
   var papers = getPapers(tid);
   var cached = topicStatsCache[tid];
-  // Load from DB if not yet cached
   if (!cached) {
     db.loadStats(tid).then(function(s) {
       if (s && Object.keys(s.concepts||{}).length > 0) { topicStatsCache[tid] = s; renderExtractionStats(panel, topic); }
     });
   }
   var stats = cached || { concepts: {}, theories: {}, varByRole: {}, relationDetails: {} };
-  var researchTopics = 0;
-  var allRelations = [];
-
+  var researchTopics = 0, allRelations = [];
   papers.forEach(function(p) {
     if (p.researchTopic) researchTopics++;
     (p.relationships || []).forEach(function(r) { allRelations.push(r); });
   });
 
-  function countBadge(n) { return '<span style="font-size:10px;background:var(--bg);color:var(--text-tertiary);padding:1px 6px;border-radius:8px;margin-left:4px">' + n + '</span>'; }
+  var S = 'font-size:12px'; // unified base size
+  var secTitle = S + ';font-weight:600;color:var(--text);margin-bottom:6px';
+  var tagBase = 'display:inline-block;font-size:11px;padding:3px 8px;border-radius:4px;margin:0 4px 4px 0';
+  var badge = 'font-size:10px;margin-left:3px;opacity:0.55';
 
   var html = '<div class="right-panel-header"><div class="right-panel-subtitle">提取统计</div></div>';
 
   // 1. 研究主题
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#127891; 研究主题</div>';
-  html += '<div style="font-size:13px;color:var(--text);padding:4px 0">' + researchTopics + ' / ' + papers.length + ' 篇文献</div></div>';
+  html += '<div class="right-panel-section" style="margin-bottom:10px">';
+  html += '<div style="' + secTitle + '">&#127891; 研究主题</div>';
+  html += '<div style="' + S + ';color:var(--text-secondary);padding-left:2px">' + researchTopics + ' / ' + papers.length + ' 篇文献</div></div>';
 
-  // 2. 核心概念
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#128218; 核心概念</div>';
-  var concepts = Object.keys(stats.concepts || {}).sort(function(a,b){ return (stats.concepts[b]||0) - (stats.concepts[a]||0); }).slice(0, 10);
+  // 2. 核心概念（蓝色系）
+  html += '<div class="right-panel-section" style="margin-bottom:10px">';
+  html += '<div style="' + secTitle + '">&#128218; 核心概念</div>';
+  var concepts = Object.keys(stats.concepts || {}).sort(function(a,b){ return (stats.concepts[b]||0)-(stats.concepts[a]||0); }).slice(0, 10);
   if (concepts.length) {
-    html += '<div class="term-tags">';
-    concepts.forEach(function(c) { html += '<span class="term-tag tag-syn">' + escapeHtml(c) + countBadge(stats.concepts[c]) + '</span>'; });
+    html += '<div style="display:flex;flex-wrap:wrap">';
+    concepts.forEach(function(c) {
+      html += '<span style="' + tagBase + ';background:#e8eef5;color:#2c5282">' + escapeHtml(c) + '<span style="' + badge + '">' + stats.concepts[c] + '</span></span>';
+    });
     html += '</div>';
   } else { html += '<div class="right-panel-empty">暂无</div>'; }
   html += '</div>';
 
-  // 3. 理论基础
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#127758; 理论基础</div>';
-  var theories = Object.keys(stats.theories || {}).sort(function(a,b){ return (stats.theories[b]||0) - (stats.theories[a]||0); }).slice(0, 8);
+  // 3. 理论基础（琥珀色系）
+  html += '<div class="right-panel-section" style="margin-bottom:10px">';
+  html += '<div style="' + secTitle + '">&#127758; 理论基础</div>';
+  var theories = Object.keys(stats.theories || {}).sort(function(a,b){ return (stats.theories[b]||0)-(stats.theories[a]||0); }).slice(0, 8);
   if (theories.length) {
-    html += '<div class="term-tags">';
-    theories.forEach(function(t) { html += '<span class="term-tag tag-cluster">' + escapeHtml(t) + countBadge(stats.theories[t]) + '</span>'; });
+    html += '<div style="display:flex;flex-wrap:wrap">';
+    theories.forEach(function(t) {
+      html += '<span style="' + tagBase + ';background:#f9f2e4;color:#9a6b3b">' + escapeHtml(t) + '<span style="' + badge + '">' + stats.theories[t] + '</span></span>';
+    });
     html += '</div>';
   } else { html += '<div class="right-panel-empty">暂无</div>'; }
   html += '</div>';
 
-  // 4. 变量（嵌套：角色 → 变量名列表）
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#128200; 变量</div>';
+  // 4. 变量（嵌套，绿色系）
+  html += '<div class="right-panel-section" style="margin-bottom:10px">';
+  html += '<div style="' + secTitle + '">&#128200; 变量</div>';
   var vbr = stats.varByRole || {};
   var roles = Object.keys(vbr).sort(function(a,b){ return (vbr[b]||{}).__count - (vbr[a]||{}).__count; });
   if (roles.length) {
     roles.forEach(function(role) {
-      var vdata = vbr[role];
-      html += '<div style="margin-bottom:6px"><div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-bottom:2px">' + escapeHtml(role) + ' (' + (vdata.__count || 0) + ')</div>';
-      html += '<div class="term-tags">';
-      Object.keys(vdata).filter(function(k){ return k !== '__count'; }).sort(function(a,b){ return vdata[b] - vdata[a]; }).slice(0, 6).forEach(function(v){
-        html += '<span class="term-tag tag-syn" style="font-size:10px;padding:2px 6px">' + escapeHtml(v) + countBadge(vdata[v]) + '</span>';
+      var vd = vbr[role];
+      html += '<div style="margin-bottom:6px"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:3px">' + escapeHtml(role) + ' <span style="font-weight:400;color:var(--text-tertiary)">' + (vd.__count||0) + '</span></div>';
+      html += '<div style="display:flex;flex-wrap:wrap">';
+      Object.keys(vd).filter(function(k){ return k!=='__count'; }).sort(function(a,b){ return vd[b]-vd[a]; }).slice(0,6).forEach(function(v){
+        html += '<span style="' + tagBase + ';background:#e4f0ec;color:#2d7d6f">' + escapeHtml(v) + '<span style="' + badge + '">' + vd[v] + '</span></span>';
       });
       html += '</div></div>';
     });
   } else { html += '<div class="right-panel-empty">暂无</div>'; }
   html += '</div>';
 
-  // 5. 研究关系
-  html += '<div class="right-panel-section"><div class="right-panel-section-title" style="font-size:11px">&#128279; 研究关系</div>';
-  html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px">共 ' + allRelations.length + ' 条</div>';
-  // Group by relation type
+  // 5. 研究关系（加大字体、更清晰）
+  html += '<div class="right-panel-section">';
+  html += '<div style="' + secTitle + '">&#128279; 研究关系</div>';
+  html += '<div style="' + S + ';color:var(--text-secondary);margin-bottom:8px">共 ' + allRelations.length + ' 条</div>';
   var relGroups = {};
-  allRelations.forEach(function(r) {
-    var rt = r.relation || '未知';
-    if (!relGroups[rt]) relGroups[rt] = [];
-    relGroups[rt].push(r);
-  });
-  Object.keys(relGroups).sort(function(a,b){ return relGroups[b].length - relGroups[a].length; }).forEach(function(rt){
-    html += '<div style="margin-bottom:4px"><div style="font-size:10px;font-weight:600;color:var(--text-secondary)">' + escapeHtml(rt) + ' (' + relGroups[rt].length + ')</div>';
-    relGroups[rt].slice(0, 5).forEach(function(r){
-      html += '<div style="font-size:10px;color:var(--text-tertiary);padding:1px 0 1px 6px;border-left:2px solid var(--border);margin-bottom:1px">' + escapeHtml(r.subject) + ' → ' + escapeHtml(r.object) + '</div>';
+  allRelations.forEach(function(r) { var rt = r.relation || '未知'; if (!relGroups[rt]) relGroups[rt] = []; relGroups[rt].push(r); });
+  var relColors = { '影响': '#2c5282', '调节': '#9a6b3b', '中介': '#2d7d6f', '相关': '#6b46c1', '研究': '#c05621', '未知': '#718096' };
+  Object.keys(relGroups).sort(function(a,b){ return relGroups[b].length-relGroups[a].length; }).forEach(function(rt){
+    var color = relColors[rt] || '#718096';
+    html += '<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:600;color:' + color + ';margin-bottom:4px">' + escapeHtml(rt) + ' (' + relGroups[rt].length + ')</div>';
+    relGroups[rt].slice(0, 8).forEach(function(r){
+      html += '<div style="' + S + ';color:var(--text-secondary);padding:2px 0 2px 8px;border-left:2px solid ' + color + ';margin-bottom:2px;line-height:1.5">' + escapeHtml(r.subject) + ' <span style="color:' + color + ';font-size:11px">→</span> ' + escapeHtml(r.object) + '</div>';
     });
-    if (relGroups[rt].length > 5) html += '<div style="font-size:9px;color:var(--text-tertiary);padding-left:6px">...还有 ' + (relGroups[rt].length - 5) + ' 条</div>';
+    if (relGroups[rt].length > 8) html += '<div style="font-size:11px;color:var(--text-tertiary);padding-left:8px">...还有 ' + (relGroups[rt].length-8) + ' 条</div>';
     html += '</div>';
   });
   html += '</div>';
