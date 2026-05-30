@@ -281,31 +281,41 @@ function renderTermDetail(panel, topic, allTerms) {
 function renderPapers(papersList) {
   const container = document.getElementById('paperList');
   if (!container) return;
-  container.innerHTML = papersList.map(p => `
-    <div class="paper-card" data-id="${p.id}">
-      <div class="paper-card-header">
-        <div class="paper-title">${p.title}</div>
-        <div class="paper-year">${p.year}</div>
-      </div>
-      <div class="paper-meta">
-        <span>${p.authors}</span>
-        <span style="font-weight:500">${p.journal}</span>
-      </div>
-      <div class="paper-abstract">${p.abstract}</div>
-      <div class="paper-card-footer">
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <div class="paper-tags">
-            ${p.tags.map(t => `<span class="paper-tag">${t}</span>`).join('')}
-          </div>
-          <span class="paper-theory">${p.theory}</span>
-        </div>
-        <div class="paper-actions">
-          <button class="btn btn-detail" data-action="detail" data-id="${p.id}">详情</button>
-          <button class="btn btn-delete" data-action="delete" data-id="${p.id}">删除</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = papersList.map(function(p) {
+    if (p._parsing) {
+      return '<div class="paper-card" style="opacity:0.7;background:#fafbfc;border-style:dashed">' +
+        '<div class="paper-card-header">' +
+        '<div class="paper-title" style="color:var(--accent)">' + p.title + '</div>' +
+        '</div>' +
+        '<div class="paper-abstract" style="color:var(--text-tertiary);font-style:italic">' + p.abstract + '</div>' +
+        '<div class="paper-card-footer"><div style="font-size:11px;color:var(--text-tertiary)">' +
+        '<span class="ai-modal-spinner" style="display:inline-block;width:12px;height:12px;border-width:2px;margin-right:6px;vertical-align:middle"></span>后台解析中...</div></div>' +
+        '</div>';
+    }
+    var isError = p.title && p.title.indexOf('❌') === 0;
+    return '<div class="paper-card' + (isError ? ' error' : '') + '" data-id="' + p.id + '" style="' + (isError ? 'border-color:#e74c3c' : '') + '">' +
+      '<div class="paper-card-header">' +
+      '<div class="paper-title">' + p.title + '</div>' +
+      '<div class="paper-year">' + (p.year || '') + '</div>' +
+      '</div>' +
+      '<div class="paper-meta">' +
+      '<span>' + (p.authors || '') + '</span>' +
+      '<span style="font-weight:500">' + (p.journal || '') + '</span>' +
+      '</div>' +
+      '<div class="paper-abstract">' + (p.abstract || '') + '</div>' +
+      '<div class="paper-card-footer">' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<div class="paper-tags">' + (p.tags || []).map(function(t) { return '<span class="paper-tag">' + t + '</span>'; }).join('') + '</div>' +
+      '<span class="paper-theory">' + (p.theory || '') + '</span>' +
+      '</div>' +
+      (isError ? '<button class="btn btn-delete" data-action="delete" data-id="' + p.id + '">删除</button>' :
+      '<div class="paper-actions">' +
+      '<button class="btn btn-detail" data-action="detail" data-id="' + p.id + '">详情</button>' +
+      '<button class="btn btn-delete" data-action="delete" data-id="' + p.id + '">删除</button>' +
+      '</div>') +
+      '</div>' +
+      '</div>';
+  }).join('');
 
   container.querySelectorAll('.btn-detail').forEach(btn => {
     btn.addEventListener('click', function(e) {
@@ -780,11 +790,26 @@ async function handlePdfUpload(file) {
     return;
   }
 
-  var btn = document.getElementById('uploadPdfBtn');
-  if (btn) { btn.textContent = '解析中...'; btn.disabled = true; }
+  var topic = getSelectedTopic();
+  if (!topic) { alert('请先选择一个研究主题'); return; }
+
+  // Create a placeholder paper immediately
+  var placeholderId = 'pdf-' + Date.now();
+  var placeholder = {
+    id: placeholderId, topicId: topic.id,
+    title: '⏳ 正在解析 PDF...',
+    authors: '', journal: '', year: null, abstract: 'AI 正在提取论文信息，请稍候...',
+    tags: [], theory: '', _parsing: true
+  };
+  papers.push(placeholder);
+  activeCard = 'papers';
+  renderCenter(getSelectedTopic());
+
+  // Reset file input so user can upload another immediately
+  var fi = document.getElementById('pdfFileInput');
+  if (fi) fi.value = '';
 
   try {
-    // Step 1: pdf.js text extraction
     var arrayBuffer = await file.arrayBuffer();
     var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     var fullText = '';
@@ -792,29 +817,36 @@ async function handlePdfUpload(file) {
     for (var i = 1; i <= maxPages; i++) {
       var page = await pdf.getPage(i);
       var content = await page.getTextContent();
-      fullText += content.items.map(function(item) { return item.str; }).join(' ') + '\n';
+      fullText += content.items.map(function(it) { return it.str; }).join(' ') + '\n';
     }
-    if (fullText.trim().length < 100) throw new Error('PDF 文本内容过少，可能是扫描版 PDF，暂不支持');
+    if (fullText.trim().length < 100) throw new Error('PDF 文本过少，可能为扫描版');
 
-    // Step 2: Two-phase AI extraction
     var paperData = await extractPaperMetadata(fullText, config);
     if (!paperData.title) throw new Error('AI 未能提取到论文标题');
-    if (paperData._truncated) console.warn('PDF解析：摘要可能不完整');
-
-    var topic = getSelectedTopic();
-    if (!topic) throw new Error('未找到当前研究主题');
     if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) throw new Error('该论文已存在');
 
-    await db.createPaper(topic.id, paperData);
+    // Replace placeholder with real paper
+    var idx = papers.findIndex(function(p) { return p.id === placeholderId; });
+    if (idx !== -1) {
+      papers[idx] = { id: paperData.id || placeholderId, topicId: topic.id, title: paperData.title, authors: paperData.authors || '', journal: paperData.journal || '', year: paperData.year || null, abstract: paperData.abstract || '', tags: paperData.tags || [], theory: paperData.theory || '', researchTopic: paperData.researchTopic || '', coreConcepts: paperData.coreConcepts || [], extractionTheories: paperData.extractionTheories || [], extractionVariables: paperData.extractionVariables || [], relationships: paperData.relationships || [], evidence: paperData.evidence || [], _truncated: paperData._truncated };
+      await db.createPaper(topic.id, papers[idx]);
+      papers[idx].id = papers[idx].id; // Keep the db-assigned id
+    }
+    // Reload from DB to get the real id
+    await db.loadAll();
     activeCard = 'papers';
     renderCenter(getSelectedTopic());
 
   } catch (e) {
+    // Replace placeholder with error card
+    var idx2 = papers.findIndex(function(p) { return p.id === placeholderId; });
+    if (idx2 !== -1) {
+      papers[idx2].title = '❌ 解析失败';
+      papers[idx2].abstract = e.message || '未知错误';
+      papers[idx2]._parsing = false;
+    }
+    renderCenter(getSelectedTopic());
     alert('解析失败：' + (e.message || '未知错误'));
-  } finally {
-    if (btn) { btn.textContent = '上传 PDF'; btn.disabled = false; }
-    var fi = document.getElementById('pdfFileInput');
-    if (fi) fi.value = '';
   }
 }
 
