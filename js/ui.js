@@ -514,10 +514,9 @@ function showPaperDetailModal(paper) {
     db.updatePaper(paper.id, u);
   }
 
-  function makeItemActions(wrapper, arr, idx, field, editFn) {
+  function makeItemActions(wrapper, arr, idx, field, editFn, container) {
     var actDiv = document.createElement('span');
     actDiv.style.cssText = ACTIONS;
-    // Edit
     var ed = document.createElement('span');
     ed.textContent = '✎'; ed.title = '编辑';
     ed.style.cssText = BTN;
@@ -526,9 +525,8 @@ function showPaperDetailModal(paper) {
       var old = arr[idx], result;
       if (editFn) { result = editFn(old); }
       else { var v = prompt('编辑：', old); if (v !== null && v.trim() !== '') result = v.trim(); }
-      if (result !== undefined && result !== null) { arr[idx] = result; saveField(field, arr.slice()); refreshArray(wrapper, arr, field, editFn); }
+      if (result !== undefined && result !== null) { arr[idx] = result; saveField(field, arr.slice()); refreshArray(container, arr, field, editFn); }
     });
-    // Delete
     var dl = document.createElement('span');
     dl.textContent = '×'; dl.title = '删除';
     dl.style.cssText = BTN + 'color:#c0392b;font-size:16px;font-weight:400';
@@ -537,7 +535,7 @@ function showPaperDetailModal(paper) {
       if (!confirm('确定删除？')) return;
       arr.splice(idx, 1);
       saveField(field, arr.slice());
-      refreshArray(wrapper, arr, field, editFn);
+      refreshArray(container, arr, field, editFn);
     });
     actDiv.appendChild(ed);
     actDiv.appendChild(dl);
@@ -576,7 +574,7 @@ function showPaperDetailModal(paper) {
         var r = prompt('关系（影响/调节/中介/相关/研究）：', old.relation); if (r === null) return null;
         var o = prompt('客体：', old.object); if (o === null) return null;
         return { subject: s.trim(), relation: r.trim(), object: o.trim() };
-      } : null)));
+      } : null)), container);
       container.appendChild(w);
     });
     // Add link
