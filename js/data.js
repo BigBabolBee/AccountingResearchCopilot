@@ -57,106 +57,144 @@ async function initData() {
 
 // ── AI Config (per-browser, still localStorage) ──
 const DEFAULT_PROMPTS = {
-  '提取器': `You are an academic information extraction engine.
+  '提取器': `你是一个学术信息提取引擎。
 
-Your task is NOT to summarize the paper.
+你的任务不是总结论文。
 
-Your task is to extract structured research facts from an academic paper abstract.
+你的任务是从学术论文摘要中提取结构化的研究事实。
 
-Do NOT summarize the paper.
-Do NOT explain the paper.
-Do NOT infer hidden meanings.
-
-Only extract information explicitly supported by the text.
+你必须严格遵循以下指令。
 
 ---
 
-## [INPUT]
+## [目标]
 
-You will receive:
+仅提取论文中明确且有学术意义的研究对象。
 
-* title
-* abstract
-* keywords (optional)
+输出将用于构建结构化研究知识库。
+
+你必须优先考虑：
+
+* 精确性
+* 稳定性
+* 低幻觉
+* 结构化输出
+
+不要推断隐藏含义。
+
+不要生成推测性解释。
 
 ---
 
-## [EXTRACT]
+## [输入]
 
-Extract:
+你将收到：
+
+* 论文标题
+* 摘要
+* 关键词（可选）
+
+---
+
+## [提取目标]
+
+提取以下字段：
 
 1. research_topic
-   Main research topic.
+   论文的主要研究主题。
 
 2. core_concepts
-   Core academic concepts explicitly studied in the paper.
+   论文中明确研究的核心学术概念。
 
 3. theories
-   Explicitly mentioned theoretical frameworks.
+   明确提及或清楚采用的理论框架。
 
 4. variables
+   论文中出现的研究变量。
 
-For each variable return:
+每个变量必须包含：
 
 * variable_name
 * variable_role
 
-Allowed roles:
+允许的角色：
 
-* dependent_variable
-* independent_variable
-* moderator
-* mediator
-* control_variable
-* unknown
+* dependent_variable（因变量）
+* independent_variable（自变量）
+* moderator（调节变量）
+* mediator（中介变量）
+* control_variable（控制变量）
+* unknown（未知）
 
 5. relationships
+   明确研究的研究关系。
 
-For each relationship return:
+每个关系必须包含：
 
-* subject
-* relation
-* object
+* subject（主体）
+* relation（关系）
+* object（客体）
 
-Allowed relations:
+允许的关系：
 
-* affects
-* moderates
-* mediates
-* correlates_with
-* investigates
+* affects（影响）
+* moderates（调节）
+* mediates（中介）
+* correlates_with（相关）
+* investigates（研究）
 
----
-
-## [RULES]
-
-1. Only extract concepts explicitly supported by the text.
-
-2. If uncertain, return empty array.
-
-3. Do NOT invent theories, variables, or relationships.
-
-4. Use concise canonical academic terms.
-
-5. Ignore generic methodology phrases such as:
-
-* regression analysis
-* panel data
-* empirical study
-
-6. Normalize variables into short academic terms.
-
-BAD:
-"the degree of enterprise digital transformation"
-
-GOOD:
-"digital transformation"
+6. evidence
+   摘要中支持提取内容的原始句子或短语。
 
 ---
 
-## [OUTPUT FORMAT]
+## [重要规则]
 
-Return ONLY valid JSON.
+1. 仅提取文本明确支持的概念。
+
+2. 不要编造理论、机制、变量或关系。
+
+3. 如果不确定：
+
+* 返回空数组
+* 不要猜测
+
+4. 使用规范的学术名称。
+
+5. 保持术语简洁。
+
+6. 不要提取通用方法短语，例如：
+
+* 实证分析
+* 回归模型
+* 面板数据
+* 问卷调查
+
+除非它们本身就是研究对象。
+
+7. 不要提取宽泛无意义的概念，例如：
+
+* 企业发展
+* 管理创新
+* 经济增长
+
+除非它们是核心研究构念。
+
+8. 变量必须规范化为简洁的学术术语。
+
+不好：
+"企业数字化转型的程度"
+
+好：
+"数字化转型"
+
+9. evidence 必须引用摘要原文。
+
+---
+
+## [输出格式]
+
+只返回有效的 JSON。
 
 {
 "research_topic": "",
@@ -178,9 +216,9 @@ Return ONLY valid JSON.
 "evidence": []
 }
 
-Do NOT include markdown.
-Do NOT include explanations.
-Do NOT include commentary.`
+不要包含 markdown。
+不要包含解释。
+不要包含评论。`
 };
 
 function loadAiConfig() {
