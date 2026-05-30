@@ -117,8 +117,6 @@ function renderCenter(topic) {
   }
 
   rebindOutlineEvents();
-  // Ensure stats cache is populated (no-op if already cached)
-  if (!topicStatsCache[tid]) recomputeStats(tid);
   renderRightPanel(topic);
 }
 
@@ -133,6 +131,12 @@ function renderExtractionStats(panel, topic) {
   var tid = topic.id;
   var papers = getPapers(tid);
   var cached = topicStatsCache[tid];
+  // Load from DB if not yet cached
+  if (!cached) {
+    db.loadStats(tid).then(function(s) {
+      if (s && Object.keys(s.concepts||{}).length > 0) { topicStatsCache[tid] = s; renderExtractionStats(panel, topic); }
+    });
+  }
   var stats = cached || { concepts: {}, theories: {}, varByRole: {}, relationDetails: {} };
   var researchTopics = 0;
   var allRelations = [];

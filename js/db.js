@@ -303,9 +303,8 @@ const db = (() => {
 
     async loadStats(topicId) {
       if (!topicId) return null;
-      var result = { concepts: {}, theories: {}, variables: {}, varRoles: {}, relationTypes: {} };
+      var result = { concepts: {}, theories: {}, varByRole: {}, relationTypes: {} };
       var allRows = [];
-      // Fetch all stats for this topic (may need pagination if many)
       var from = 0, pageSize = 200;
       while (true) {
         var resp = await supabase.from('extraction_stats').select('stat_type, stat_key, stat_value').eq('topic_id', topicId).range(from, from + pageSize - 1);
@@ -317,8 +316,14 @@ const db = (() => {
       allRows.forEach(function(r) {
         if (r.stat_type === 'concept') result.concepts[r.stat_key] = r.stat_value;
         else if (r.stat_type === 'theory') result.theories[r.stat_key] = r.stat_value;
-        else if (r.stat_type === 'variable') result.variables[r.stat_key] = r.stat_value;
-        else if (r.stat_type === 'variable_role') result.varRoles[r.stat_key] = r.stat_value;
+        else if (r.stat_type === 'variable') {
+          // stat_key = "自变量|ESG Score"
+          var parts = r.stat_key.split('|');
+          var role = parts[0], vname = parts.slice(1).join('|');
+          if (!result.varByRole[role]) result.varByRole[role] = { __count: 0 };
+          result.varByRole[role][vname] = r.stat_value;
+          result.varByRole[role].__count += r.stat_value;
+        }
         else if (r.stat_type === 'relation') result.relationTypes[r.stat_key] = r.stat_value;
       });
       return result;
