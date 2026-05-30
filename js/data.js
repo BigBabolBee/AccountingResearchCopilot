@@ -47,9 +47,26 @@ async function seedDefaultData() {
     .forEach((s, i) => db.createStructure(tid, s, i));
 }
 
+// Prompt cache (loaded from DB, fallback to DEFAULT_PROMPTS)
+var promptsCache = {};
+
 // Init data — called after auth is confirmed
 async function initData() {
   await db.loadAll();
+  // Load prompts from DB, seed with defaults if empty
+  try {
+    promptsCache = await db.loadPrompts();
+    if (!promptsCache || Object.keys(promptsCache).length === 0) {
+      // First time: seed prompts to DB
+      for (var k in DEFAULT_PROMPTS) {
+        await db.savePrompt(k, DEFAULT_PROMPTS[k]);
+      }
+      promptsCache = Object.assign({}, DEFAULT_PROMPTS);
+    }
+  } catch (e) {
+    console.error('loadPrompts error, using defaults:', e);
+    promptsCache = Object.assign({}, DEFAULT_PROMPTS);
+  }
   if (topics.length === 0) {
     await seedDefaultData();
   }
@@ -224,9 +241,13 @@ const DEFAULT_PROMPTS = {
 function loadAiConfig() {
   const raw = localStorage.getItem('ai_config');
   const config = raw ? JSON.parse(raw) : { apiKey: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o' };
-  // Always merge latest default prompts into config (user can't edit them anyway)
-  if (!config.prompts) config.prompts = {};
-  for (var k in DEFAULT_PROMPTS) { config.prompts[k] = DEFAULT_PROMPTS[k]; }
+  // Merge DB-loaded prompts if available, otherwise use defaults
+  if (typeof promptsCache !== 'undefined' && Object.keys(promptsCache).length > 0) {
+    config.prompts = promptsCache;
+  } else if (!config.prompts) {
+    config.prompts = {};
+    for (var k in DEFAULT_PROMPTS) { config.prompts[k] = DEFAULT_PROMPTS[k]; }
+  }
   return config;
 }
 function saveAiConfig(config) {
@@ -567,7 +588,7 @@ async function extractPaperStructured(paper, config) {
     throw new Error('论文缺少标题或摘要，无法进行结构化提取');
   }
 
-  var sysPrompt = (config.prompts && config.prompts['提取器']) || DEFAULT_PROMPTS['提取器'];
+  var sysPrompt = (config.prompts && config.prompts['提取器']) || promptsCache['提取器'] || DEFAULT_PROMPTS['提取器'];
 
   console.log('extractPaperStructured model:', config.model);
 
@@ -578,10 +599,10 @@ async function extractPaperStructured(paper, config) {
       model: config.model,
       messages: [
         { role: 'system', content: sysPrompt },
-        { role: 'user', content: 'paper title: ' + paper.title + '\nabstract: ' + (paper.abstract || '').slice(0, 2500) }
+        { role: 'user', content: '论文标题：' + paper.title + '\n摘要：' + (paper.abstract || '').slice(0, 2500) }
       ],
       enable_thinking: false,
-      temperature: 0.1,
+      temperature: 0.2,
       max_tokens: 4000
     })
   });

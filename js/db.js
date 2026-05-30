@@ -235,6 +235,26 @@ const db = (() => {
     return data && data.length > 0 ? data[0] : null;
   }
 
+  // ── Prompts ──
+  async function loadPrompts() {
+    if (!uid()) return {};
+    const { data, error } = await supabase.from('prompts').select('name, content');
+    if (error || !data) { return {}; }
+    const prompts = {};
+    data.forEach(function(p) { prompts[p.name] = p.content; });
+    return prompts;
+  }
+
+  async function savePrompt(name, content) {
+    const { error } = await supabase.from('prompts').upsert({
+      user_id: uid(),
+      name: name,
+      content: content,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id, name' });
+    if (error) throw error;
+  }
+
   return {
     loadAll,
     // Topics
@@ -252,6 +272,8 @@ const db = (() => {
     // Term Expansions
     createTermExpansion, deleteTermExpansion,
     // Sharing
-    getTopicMembers, addTopicMember, removeTopicMember, lookupUserByEmail
+    getTopicMembers, addTopicMember, removeTopicMember, lookupUserByEmail,
+    // Prompts
+    loadPrompts, savePrompt
   };
 })();
