@@ -471,6 +471,8 @@ function showPaperDetailModal(paper) {
           });
           Object.assign(paper, s);
           delete activeExtractions[paper.id];
+          // Refresh card list (removes "AI提取中" tag)
+          renderCenter(getSelectedTopic());
           // If modal still open, refresh it
           if (document.body.contains(overlay) && overlay.querySelector('#detailClose')) {
             overlay.remove();
@@ -478,6 +480,7 @@ function showPaperDetailModal(paper) {
           }
         } catch (e) {
           delete activeExtractions[paper.id];
+          renderCenter(getSelectedTopic());
           if (document.body.contains(overlay)) {
             extractBtn.disabled = false;
             extractBtn.textContent = '提取';
