@@ -293,6 +293,8 @@ function renderPapers(papersList) {
         '</div>';
     }
     var isError = p.title && p.title.indexOf('❌') === 0;
+    var extracting = activeExtractions[p.id];
+    var extractTag = extracting ? '<span style="font-size:10px;background:#e8f6f2;color:#2d7d6f;padding:2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:3px"><span class="ai-modal-spinner" style="display:inline-block;width:10px;height:10px;border-width:2px;margin:0"></span>AI提取中</span>' : '';
     return '<div class="paper-card' + (isError ? ' error' : '') + '" data-id="' + p.id + '" style="' + (isError ? 'border-color:#e74c3c' : '') + '">' +
       '<div class="paper-card-header">' +
       '<div class="paper-title">' + p.title + '</div>' +
@@ -307,6 +309,7 @@ function renderPapers(papersList) {
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
       '<div class="paper-tags">' + (p.tags || []).map(function(t) { return '<span class="paper-tag">' + t + '</span>'; }).join('') + '</div>' +
       '<span class="paper-theory">' + (p.theory || '') + '</span>' +
+      extractTag +
       '</div>' +
       (isError ? '<button class="btn btn-delete" data-action="delete" data-id="' + p.id + '">删除</button>' :
       '<div class="paper-actions">' +
