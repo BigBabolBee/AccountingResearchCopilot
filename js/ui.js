@@ -3,6 +3,32 @@ let activeCard = 'papers';
 let rightPanelMode = 'list';   // 'list' | 'detail'
 let rightPanelTerm = null;     // current term name in detail mode
 
+// ── Toast notification ──
+function showToast(msg, type) {
+  var container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none';
+    document.body.appendChild(container);
+  }
+  var colors = { success: '#27ae60', error: '#c0392b', info: '#2c5282', warn: '#e67e22' };
+  var icons = { success: '&#10003;', error: '&#10007;', info: '&#8505;', warn: '&#9888;' };
+  var color = colors[type] || colors.info;
+  var icon = icons[type] || icons.info;
+
+  var toast = document.createElement('div');
+  toast.style.cssText = 'background:#fff;border-left:4px solid ' + color + ';box-shadow:0 4px 16px rgba(0,0,0,0.12);border-radius:6px;padding:12px 16px;font-size:13px;color:var(--text);max-width:520px;pointer-events:auto;display:flex;align-items:center;gap:10px;animation:toastIn 0.3s ease';
+  toast.innerHTML = '<span style="color:' + color + ';font-weight:700;font-size:16px">' + icon + '</span><span style="flex:1;line-height:1.4">' + msg + '</span><span style="cursor:pointer;color:var(--text-tertiary);font-size:16px;line-height:1" onclick="this.parentNode.remove()">&times;</span>';
+
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.5s';
+    setTimeout(function() { if (toast.parentNode) toast.remove(); }, 500);
+  }, 10000);
+}
+
 // ═══════════════════════ SIDEBAR ═══════════════════════
 function renderSidebar() {
   const topicList = document.getElementById('topicList');
@@ -455,7 +481,7 @@ function renderPapers(papersList) {
         recomputeStats(getSelectedTopic()?.id);
         renderCenter(getSelectedTopic());
       } catch (err) {
-        alert('删除失败：' + (err.message || '网络错误，请稍后重试'));
+        showToast('删除失败：' + (err.message || '网络错误'), 'error');
       }
     });
   });
@@ -566,7 +592,7 @@ function showPaperDetailModal(paper) {
           var isEmpty = !s.researchTopic && !(s.coreConcepts||[]).length && !(s.extractionTheories||[]).length
             && !(s.extractionVariables||[]).length && !(s.relationships||[]).length && !(s.evidence||[]).length;
           if (isEmpty) {
-            alert('AI 未提取到任何结构化数据');
+            showToast('「' + paper.title + '」AI 未提取到结构化数据', 'warn');
             delete activeExtractions[paper.id];
             if (document.body.contains(overlay)) {
               extractBtn.disabled = false;
@@ -581,6 +607,7 @@ function showPaperDetailModal(paper) {
           Object.assign(paper, s);
           delete activeExtractions[paper.id];
           recomputeStats(getSelectedTopic()?.id);
+          showToast('「' + paper.title + '」AI 提取完成', 'success');
           // Update the card's "AI提取中" tag directly (don't disrupt current view)
           var card = document.querySelector('.paper-card[data-id="' + paper.id + '"]');
           if (card) {
@@ -605,7 +632,7 @@ function showPaperDetailModal(paper) {
             extractBtn.disabled = false;
             extractBtn.textContent = '提取';
           }
-          alert('提取失败：' + (e.message||'未知错误'));
+          showToast('「' + paper.title + '」提取失败：' + (e.message||'未知错误'), 'error');
         }
       })();
     });
@@ -852,7 +879,7 @@ function showCardItemModal(cardType) {
       const title = overlay.querySelector('#cardItemTitle').value.trim();
       if (!title) { alert('请输入论文标题'); return; }
       const authors = overlay.querySelector('#cardItemAuthors').value.trim();
-      if (isDuplicatePaper(tid, title, authors)) { alert('该论文已存在（标题与作者一致）'); return; }
+      if (isDuplicatePaper(tid, title, authors)) { showToast('「' + title + '」已存在（标题与作者一致）', 'warn'); return; }
       const tags = overlay.querySelector('#cardItemTags')?.value.trim().split(',').map(t => t.trim()).filter(Boolean) || [];
       const data = {
         title,
@@ -956,7 +983,7 @@ async function handlePdfUpload(file) {
 
     var paperData = await extractPaperMetadata(fullText, config);
     if (!paperData.title) throw new Error('AI 未能提取到论文标题');
-    if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) throw new Error('该论文已存在');
+    if (isDuplicatePaper(topic.id, paperData.title, paperData.authors)) { showToast('「' + paperData.title + '」已存在', 'warn'); papers = papers.filter(function(p) { return p.id !== placeholderId; }); renderCenter(topic); return; }
 
     // Save to DB, remove placeholder, insert real paper into memory
     var newId = await db.createPaper(topic.id, paperData);
@@ -966,9 +993,9 @@ async function handlePdfUpload(file) {
     recomputeStats(topic.id);
     activeCard = 'papers';
     renderCenter(getSelectedTopic());
+    showToast('「' + paperData.title + '」解析完成', 'success');
 
   } catch (e) {
-    // Replace placeholder with error card
     var idx2 = papers.findIndex(function(p) { return p.id === placeholderId; });
     if (idx2 !== -1) {
       papers[idx2].title = '❌ 解析失败';
@@ -976,7 +1003,7 @@ async function handlePdfUpload(file) {
       papers[idx2]._parsing = false;
     }
     renderCenter(getSelectedTopic());
-    alert('解析失败：' + (e.message || '未知错误'));
+    showToast('解析失败：' + (e.message || '未知错误'), 'error');
   }
 }
 
